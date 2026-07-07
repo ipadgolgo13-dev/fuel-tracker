@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="燃費ログ">
+<meta name="theme-color" content="#14161a">
+<title>燃費・走行距離ログ</title>
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2314161a'/%3E%3Ctext x='50' y='62' font-size='46' text-anchor='middle' fill='%23e8a33d' font-family='monospace' font-weight='bold'%3EL/km%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#14161a;
+    --panel:#1e2226;
+    --panel-raised:#25292e;
+    --line:#2f343a;
+    --text:#eef0f0;
+    --muted:#8b9199;
+    --amber:#e8a33d;
+    --teal:#4fb3a9;
+    --danger:#d64550;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  body{padding-bottom:env(safe-area-inset-bottom);}
+  .odo-font{font-family:"SF Mono","Menlo","Courier New",monospace; font-variant-numeric:tabular-nums;}
+
+  header{padding:calc(env(safe-area-inset-top) + 18px) 20px 12px;}
+  header h1{font-size:15px; font-weight:600; letter-spacing:.08em; color:var(--muted); margin:0 0 14px; text-transform:uppercase;}
+
+  .tabs{display:flex; gap:8px;}
+  .tab{flex:1; padding:10px 8px; border-radius:12px; background:var(--panel); border:1px solid var(--line);
+    text-align:center; font-size:14px; font-weight:600; color:var(--muted); transition:.15s;}
+  .tab.active[data-v="stream"]{background:rgba(232,163,61,.12); border-color:var(--amber); color:var(--amber);}
+  .tab.active[data-v="cygnus"]{background:rgba(79,179,169,.12); border-color:var(--teal); color:var(--teal);}
+
+  main{padding:0 20px 100px;}
+
+  .gauge{margin-top:18px; padding:26px 22px; border-radius:20px; background:var(--panel);
+    border:1px solid var(--line); position:relative; overflow:hidden;}
+  .gauge::before{content:""; position:absolute; top:-40%; right:-20%; width:220px; height:220px; border-radius:50%;
+    background:radial-gradient(circle, var(--accent) 0%, transparent 70%); opacity:.10;}
+  .gauge-label{font-size:12px; color:var(--muted); letter-spacing:.1em; text-transform:uppercase; margin-bottom:6px;}
+  .gauge-value{font-size:52px; font-weight:700; color:var(--accent); line-height:1; display:flex; align-items:baseline; gap:6px;}
+  .gauge-unit{font-size:16px; color:var(--muted); font-weight:500;}
+  .gauge-sub{display:flex; gap:22px; margin-top:16px; padding-top:16px; border-top:1px solid var(--line);}
+  .gauge-sub div{flex:1;}
+  .gauge-sub .k{font-size:11px; color:var(--muted); letter-spacing:.05em; text-transform:uppercase; margin-bottom:3px;}
+  .gauge-sub .v{font-size:18px; font-weight:600;}
+
+  .section-title{font-size:12px; color:var(--muted); letter-spacing:.1em; text-transform:uppercase;
+    margin:26px 0 10px; display:flex; justify-content:space-between; align-items:center;}
+
+  .entry{display:flex; align-items:center; gap:12px; padding:13px 14px; border-radius:14px; background:var(--panel);
+    border:1px solid var(--line); margin-bottom:8px;}
+  .entry .date{font-size:11px; color:var(--muted); width:64px; flex-shrink:0; line-height:1.3;}
+  .entry .mid{flex:1; min-width:0;}
+  .entry .odo{font-size:15px; font-weight:600;}
+  .entry .detail{font-size:12px; color:var(--muted); margin-top:2px;}
+  .entry .kml{font-size:17px; font-weight:700; color:var(--accent); text-align:right; flex-shrink:0;}
+  .entry .kml small{display:block; font-size:10px; color:var(--muted); font-weight:500;}
+  .entry .del{color:var(--muted); font-size:18px; padding:0 2px 0 6px; flex-shrink:0;}
+
+  .empty{text-align:center; padding:40px 20px; color:var(--muted); font-size:13px; line-height:1.7;}
+
+  .fab{position:fixed; right:20px; bottom:calc(env(safe-area-inset-bottom) + 24px); width:56px; height:56px;
+    border-radius:50%; background:var(--accent); color:#14161a; border:none; font-size:28px; font-weight:400;
+    box-shadow:0 6px 20px rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center;}
+  .fab:active{transform:scale(.94);}
+
+  .sheet-backdrop{position:fixed; inset:0; background:rgba(0,0,0,.55); opacity:0; pointer-events:none; transition:.2s; z-index:10;}
+  .sheet-backdrop.open{opacity:1; pointer-events:auto;}
+  .sheet{position:fixed; left:0; right:0; bottom:0; background:var(--panel-raised); border-radius:20px 20px 0 0;
+    padding:10px 20px calc(env(safe-area-inset-bottom) + 24px); transform:translateY(100%); transition:.25s cubic-bezier(.32,.72,0,1); z-index:11;}
+  .sheet.open{transform:translateY(0);}
+  .sheet-handle{width:36px; height:4px; background:var(--line); border-radius:2px; margin:8px auto 18px;}
+  .sheet h2{font-size:16px; margin:0 0 18px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block; font-size:12px; color:var(--muted); margin-bottom:6px;}
+  .field input{width:100%; padding:12px 14px; border-radius:12px; background:var(--panel); border:1px solid var(--line);
+    color:var(--text); font-size:16px;}
+  .field input:focus{outline:none; border-color:var(--accent);}
+  .sheet-actions{display:flex; gap:10px; margin-top:20px;}
+  .btn{flex:1; padding:13px; border-radius:12px; border:none; font-size:15px; font-weight:600;}
+  .btn-cancel{background:var(--panel); color:var(--muted); border:1px solid var(--line);}
+  .btn-save{background:var(--accent); color:#14161a;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>燃費・走行距離ログ</h1>
+  <div class="tabs">
+    <div class="tab" data-v="stream" onclick="switchVehicle('stream')">Honda Stream RN6</div>
+    <div class="tab" data-v="cygnus" onclick="switchVehicle('cygnus')">Cygnus Ray ZR</div>
+  </div>
+</header>
+
+<main>
+  <div class="gauge" id="gauge">
+    <div class="gauge-label">平均燃費</div>
+    <div class="gauge-value odo-font"><span id="avgKml">--</span><span class="gauge-unit">km/L</span></div>
+    <div class="gauge-sub">
+      <div><div class="k">総走行距離</div><div class="v odo-font" id="totalDist">--</div></div>
+      <div><div class="k">総給油量</div><div class="v odo-font" id="totalLiters">--</div></div>
+      <div><div class="k">記録数</div><div class="v odo-font" id="entryCount">--</div></div>
+    </div>
+  </div>
+
+  <div class="section-title">給油履歴</div>
+  <div id="list"></div>
+</main>
+
+<button class="fab" onclick="openSheet()">＋</button>
+
+<div class="sheet-backdrop" id="backdrop" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-handle"></div>
+  <h2>給油記録を追加</h2>
+  <div class="field">
+    <label>日付</label>
+    <input type="date" id="inDate">
+  </div>
+  <div class="field">
+    <label>走行距離(オドメーター) km</label>
+    <input type="number" id="inOdo" inputmode="decimal" placeholder="例: 45230">
+  </div>
+  <div class="field">
+    <label>給油量 L</label>
+    <input type="number" id="inLiters" inputmode="decimal" step="0.01" placeholder="例: 8.5">
+  </div>
+  <div class="field">
+    <label>金額 円(任意)</label>
+    <input type="number" id="inPrice" inputmode="numeric" placeholder="例: 1400">
+  </div>
+  <div class="sheet-actions">
+    <button class="btn btn-cancel" onclick="closeSheet()">キャンセル</button>
+    <button class="btn btn-save" onclick="saveEntry()">保存</button>
+  </div>
+</div>
+
+<script>
+const VEHICLES = {
+  stream: { name: 'Honda Stream RN6', accent: '#e8a33d' },
+  cygnus: { name: 'Cygnus Ray ZR',     accent: '#4fb3a9' }
+};
+const STORAGE_KEY = 'fuelmate:entries:v1';
+let current = 'stream';
+let data = { stream: [], cygnus: [] };
+
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) data = JSON.parse(raw);
+  }catch(e){ console.error('load error', e); }
+}
+function persist(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+  catch(e){ console.error('save error', e); }
+}
+
+function switchVehicle(v){
+  current = v;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.v===v));
+  document.documentElement.style.setProperty('--accent-global', VEHICLES[v].accent);
+  document.getElementById('gauge').style.setProperty('--accent', VEHICLES[v].accent);
+  render();
+}
+
+function render(){
+  const entries = [...data[current]].sort((a,b)=> a.odo - b.odo);
+  const accent = VEHICLES[current].accent;
+  document.getElementById('gauge').style.setProperty('--accent', accent);
+
+  if(entries.length < 2){
+    document.getElementById('avgKml').textContent = '--';
+    document.getElementById('totalDist').textContent = entries.length ? '0' : '--';
+    document.getElementById('totalLiters').textContent = entries.length ? entries[0].liters.toFixed(1) : '--';
+    document.getElementById('entryCount').textContent = entries.length;
+  } else {
+    const totalDist = entries[entries.length-1].odo - entries[0].odo;
+    const totalLiters = entries.slice(1).reduce((s,e)=>s+e.liters,0);
+    const avg = totalLiters > 0 ? (totalDist/totalLiters) : 0;
+    document.getElementById('avgKml').textContent = avg.toFixed(2);
+    document.getElementById('totalDist').textContent = totalDist.toLocaleString();
+    document.getElementById('totalLiters').textContent = totalLiters.toFixed(1) + 'L';
+    document.getElementById('entryCount').textContent = entries.length;
+  }
+
+  const list = document.getElementById('list');
+  if(entries.length === 0){
+    list.innerHTML = '<div class="empty">まだ記録がありません。右下の＋から給油記録を追加してください。</div>';
+    return;
+  }
+  const sortedDesc = [...entries].sort((a,b)=> b.odo - a.odo);
+  list.innerHTML = sortedDesc.map((e,i)=>{
+    const idx = entries.findIndex(x=>x.id===e.id);
+    let kmlHtml = '<span class="kml odo-font">初回</span>';
+    if(idx > 0){
+      const prev = entries[idx-1];
+      const dist = e.odo - prev.odo;
+      const kml = e.liters > 0 ? (dist / e.liters) : 0;
+      kmlHtml = `<div class="kml odo-font">${kml.toFixed(1)}<small>km/L</small></div>`;
+    }
+    const priceStr = e.price ? ` ・ ¥${Number(e.price).toLocaleString()}` : '';
+    return `<div class="entry">
+      <div class="date">${formatDate(e.date)}</div>
+      <div class="mid">
+        <div class="odo odo-font">${e.odo.toLocaleString()} km</div>
+        <div class="detail">${e.liters.toFixed(1)}L${priceStr}</div>
+      </div>
+      ${kmlHtml}
+      <div class="del" onclick="deleteEntry('${e.id}')">✕</div>
+    </div>`;
+  }).join('');
+}
+
+function formatDate(d){
+  const dt = new Date(d);
+  return (dt.getMonth()+1) + '/' + dt.getDate();
+}
+
+function openSheet(){
+  document.getElementById('inDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('inOdo').value = '';
+  document.getElementById('inLiters').value = '';
+  document.getElementById('inPrice').value = '';
+  document.getElementById('backdrop').classList.add('open');
+  document.getElementById('sheet').classList.add('open');
+}
+function closeSheet(){
+  document.getElementById('backdrop').classList.remove('open');
+  document.getElementById('sheet').classList.remove('open');
+}
+
+function saveEntry(){
+  const date = document.getElementById('inDate').value;
+  const odo = parseFloat(document.getElementById('inOdo').value);
+  const liters = parseFloat(document.getElementById('inLiters').value);
+  const price = document.getElementById('inPrice').value;
+  if(!date || isNaN(odo) || isNaN(liters) || liters<=0){
+    alert('日付・走行距離・給油量を正しく入力してください');
+    return;
+  }
+  data[current].push({
+    id: Date.now().toString(36),
+    date, odo, liters,
+    price: price ? parseFloat(price) : null
+  });
+  persist();
+  closeSheet();
+  render();
+}
+
+function deleteEntry(id){
+  data[current] = data[current].filter(e=>e.id!==id);
+  persist();
+  render();
+}
+
+loadData();
+switchVehicle('stream');
+</script>
+</body>
+</html>
