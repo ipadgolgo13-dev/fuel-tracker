@@ -1,0 +1,54 @@
+{
+  "stream": [],
+  "cygnus": [
+    {
+      "id": "mrryfp7x",
+      "date": "2026-07-17",
+      "odo": 23838,
+      "liters": 4.01,
+      "price": 650
+    },
+    {
+      "id": "mrrygb2f",
+      "date": "2026-07-11",
+      "odo": 23623,
+      "liters": 7.24,
+      "price": 1164
+    },
+    {
+      "id": "mrrygrh0",
+      "date": "2026-07-04",
+      "odo": 23234,
+      "liters": 4.36,
+      "price": 693
+    },
+    {
+      "id": "mrryhcuk",
+      "date": "2026-06-24",
+      "odo": 23011,
+      "liters": 4.33,
+      "price": 701
+    },
+    {
+      "id": "mrryi718",
+      "date": "2026-06-16",
+      "odo": 22791,
+      "liters": 4.4873,
+      "price": 730
+    },
+    {
+      "id": "mrrzrpvz",
+      "date": "2026-06-11",
+      "odo": 22568,
+      "liters": 3.62,
+      "price": 590
+    },
+    {
+      "id": "mrrzu33a",
+      "date": "2026-06-06",
+      "odo": 22367,
+      "liters": 2.86,
+      "price": 458
+    }
+  ]
+}
