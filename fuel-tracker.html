@@ -2,6 +2,9 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -30,7 +33,9 @@
 
   header{padding:calc(env(safe-area-inset-top) + 18px) 20px 12px;}
   header h1{font-size:15px; font-weight:600; letter-spacing:.08em; color:var(--muted); margin:0 0 14px; text-transform:uppercase;}
-  .version{font-size:10px; color:var(--muted); opacity:.6; letter-spacing:.05em; margin:-10px 0 14px;}
+  .version{font-size:10px; color:var(--muted); opacity:.6; letter-spacing:.05em; margin:-10px 0 14px; display:flex; align-items:center; justify-content:space-between;}
+  .refresh-btn{color:var(--muted); opacity:.8; font-size:10px; padding:4px 10px; border-radius:8px; border:1px solid var(--line); background:var(--panel);}
+  .refresh-btn:active{transform:scale(.95);}
 
   .tabs{display:flex; gap:8px;}
   .tab{flex:1; padding:10px 8px; border-radius:12px; background:var(--panel); border:1px solid var(--line);
@@ -100,7 +105,7 @@
 
 <header>
   <h1>燃費・走行距離ログ</h1>
-  <div class="version">v1.2.0</div>
+  <div class="version"><span>v1.2.0</span><span class="refresh-btn" onclick="forceRefresh()">⟳ 更新を確認</span></div>
   <div class="tabs">
     <div class="tab" data-v="stream" onclick="switchVehicle('stream')">Honda Stream RN6</div>
     <div class="tab" data-v="cygnus" onclick="switchVehicle('cygnus')">Cygnus Ray ZR</div>
@@ -309,6 +314,10 @@ function deleteFromSheet(){
     deleteEntry(editingId);
     closeSheet();
   }
+}
+
+function forceRefresh(){
+  location.replace(location.pathname + '?v=' + Date.now());
 }
 
 function exportBackup(){
