@@ -117,10 +117,10 @@
 
 <header>
   <h1>燃費・走行距離ログ</h1>
-  <div class="version"><span>v1.3.0</span><span class="refresh-btn" onclick="forceRefresh()">⟳ 更新を確認</span></div>
+  <div class="version"><span>v1.4.0</span><span class="refresh-btn" onclick="forceRefresh()">⟳ 更新を確認</span></div>
   <div class="tabs">
-    <div class="tab" data-v="stream" onclick="switchVehicle('stream')">Honda Stream RN6</div>
     <div class="tab" data-v="cygnus" onclick="switchVehicle('cygnus')">Cygnus Ray ZR</div>
+    <div class="tab" data-v="stream" onclick="switchVehicle('stream')">Honda Stream RN6</div>
   </div>
 </header>
 
@@ -236,6 +236,7 @@ function persist(){
 
 function switchVehicle(v){
   current = v;
+  try{ localStorage.setItem('fuelmate:lastVehicle', v); }catch(e){}
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.v===v));
   document.documentElement.style.setProperty('--accent', VEHICLES[v].accent);
   document.getElementById('gauge').style.setProperty('--accent', VEHICLES[v].accent);
@@ -511,7 +512,12 @@ function importBackup(event){
 }
 
 loadData();
-switchVehicle('stream');
+let lastVehicle = 'cygnus';
+try{
+  const saved = localStorage.getItem('fuelmate:lastVehicle');
+  if(saved === 'stream' || saved === 'cygnus') lastVehicle = saved;
+}catch(e){}
+switchVehicle(lastVehicle);
 </script>
 </body>
 </html>
