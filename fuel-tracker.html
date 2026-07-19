@@ -63,6 +63,7 @@
   .entry .kml{font-size:17px; font-weight:700; color:var(--accent); text-align:right; flex-shrink:0;}
   .entry .kml small{display:block; font-size:10px; color:var(--muted); font-weight:500;}
   .entry .del{color:var(--muted); font-size:18px; padding:0 2px 0 6px; flex-shrink:0;}
+  .entry .mid{cursor:pointer;}
 
   .empty{text-align:center; padding:40px 20px; color:var(--muted); font-size:13px; line-height:1.7;}
 
@@ -87,6 +88,7 @@
   .btn{flex:1; padding:13px; border-radius:12px; border:none; font-size:15px; font-weight:600;}
   .btn-cancel{background:var(--panel); color:var(--muted); border:1px solid var(--line);}
   .btn-save{background:var(--accent); color:#14161a;}
+  .btn-delete{background:transparent; color:var(--danger); border:1px solid var(--danger); flex:0 0 auto; padding:13px 16px;}
 </style>
 </head>
 <body>
@@ -119,7 +121,7 @@
 <div class="sheet-backdrop" id="backdrop" onclick="closeSheet()"></div>
 <div class="sheet" id="sheet">
   <div class="sheet-handle"></div>
-  <h2>給油記録を追加</h2>
+  <h2 id="sheetTitle">給油記録を追加</h2>
   <div class="field">
     <label>日付</label>
     <input type="date" id="inDate">
@@ -137,6 +139,7 @@
     <input type="number" id="inPrice" inputmode="numeric" placeholder="例: 1400">
   </div>
   <div class="sheet-actions">
+    <button class="btn btn-delete" id="sheetDeleteBtn" onclick="deleteFromSheet()" style="display:none;">削除</button>
     <button class="btn btn-cancel" onclick="closeSheet()">キャンセル</button>
     <button class="btn btn-save" onclick="saveEntry()">保存</button>
   </div>
@@ -150,6 +153,7 @@ const VEHICLES = {
 const STORAGE_KEY = 'fuelmate:entries:v1';
 let current = 'stream';
 let data = { stream: [], cygnus: [] };
+let editingId = null;
 
 function loadData(){
   try{
@@ -208,7 +212,7 @@ function render(){
     const priceStr = e.price ? ` ・ ¥${Number(e.price).toLocaleString()}` : '';
     return `<div class="entry">
       <div class="date">${formatDate(e.date)}</div>
-      <div class="mid">
+      <div class="mid" onclick="editEntry('${e.id}')">
         <div class="odo odo-font">${e.odo.toLocaleString()} km</div>
         <div class="detail">${e.liters.toFixed(1)}L${priceStr}</div>
       </div>
@@ -224,6 +228,9 @@ function formatDate(d){
 }
 
 function openSheet(){
+  editingId = null;
+  document.getElementById('sheetTitle').textContent = '給油記録を追加';
+  document.getElementById('sheetDeleteBtn').style.display = 'none';
   document.getElementById('inDate').value = new Date().toISOString().slice(0,10);
   document.getElementById('inOdo').value = '';
   document.getElementById('inLiters').value = '';
@@ -232,8 +239,23 @@ function openSheet(){
   document.getElementById('sheet').classList.add('open');
 }
 function closeSheet(){
+  editingId = null;
   document.getElementById('backdrop').classList.remove('open');
   document.getElementById('sheet').classList.remove('open');
+}
+
+function editEntry(id){
+  const entry = data[current].find(e=>e.id===id);
+  if(!entry) return;
+  editingId = id;
+  document.getElementById('sheetTitle').textContent = '給油記録を編集';
+  document.getElementById('sheetDeleteBtn').style.display = 'block';
+  document.getElementById('inDate').value = entry.date;
+  document.getElementById('inOdo').value = entry.odo;
+  document.getElementById('inLiters').value = entry.liters;
+  document.getElementById('inPrice').value = entry.price != null ? entry.price : '';
+  document.getElementById('backdrop').classList.add('open');
+  document.getElementById('sheet').classList.add('open');
 }
 
 function saveEntry(){
@@ -245,11 +267,21 @@ function saveEntry(){
     alert('日付・走行距離・給油量を正しく入力してください');
     return;
   }
-  data[current].push({
-    id: Date.now().toString(36),
-    date, odo, liters,
-    price: price ? parseFloat(price) : null
-  });
+  if(editingId){
+    const entry = data[current].find(e=>e.id===editingId);
+    if(entry){
+      entry.date = date;
+      entry.odo = odo;
+      entry.liters = liters;
+      entry.price = price ? parseFloat(price) : null;
+    }
+  } else {
+    data[current].push({
+      id: Date.now().toString(36),
+      date, odo, liters,
+      price: price ? parseFloat(price) : null
+    });
+  }
   persist();
   closeSheet();
   render();
@@ -259,6 +291,13 @@ function deleteEntry(id){
   data[current] = data[current].filter(e=>e.id!==id);
   persist();
   render();
+}
+
+function deleteFromSheet(){
+  if(editingId){
+    deleteEntry(editingId);
+    closeSheet();
+  }
 }
 
 loadData();
