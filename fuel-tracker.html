@@ -59,6 +59,18 @@
 
   .section-title{font-size:12px; color:var(--muted); letter-spacing:.1em; text-transform:uppercase;
     margin:26px 0 10px; display:flex; justify-content:space-between; align-items:center;}
+  .add-link{color:var(--accent); font-size:12px; letter-spacing:0; text-transform:none; font-weight:700;}
+  .maint-entry{display:flex; align-items:center; gap:12px; padding:13px 14px; border-radius:14px; background:var(--panel);
+    border:1px solid var(--line); margin-bottom:8px; cursor:pointer;}
+  .maint-entry .date{font-size:11px; color:var(--muted); width:64px; flex-shrink:0; line-height:1.3;}
+  .maint-entry .mid{flex:1; min-width:0;}
+  .maint-entry .type{font-size:15px; font-weight:600;}
+  .maint-entry .detail{font-size:12px; color:var(--muted); margin-top:2px;}
+  .maint-entry .del{color:var(--muted); font-size:18px; padding:0 2px 0 6px; flex-shrink:0;}
+  .type-chip{display:flex; gap:8px; margin-bottom:14px;}
+  .type-chip div{flex:1; padding:10px 6px; border-radius:12px; background:var(--panel); border:1px solid var(--line);
+    text-align:center; font-size:13px; color:var(--muted);}
+  .type-chip div.active{border-color:var(--accent); color:var(--accent); background:rgba(255,255,255,.04);}
   .backup-bar{display:flex; gap:8px; margin-top:14px;}
   .backup-btn{flex:1; padding:10px; border-radius:12px; background:var(--panel); border:1px solid var(--line);
     color:var(--muted); font-size:12px; font-weight:600; text-align:center;}
@@ -105,7 +117,7 @@
 
 <header>
   <h1>燃費・走行距離ログ</h1>
-  <div class="version"><span>v1.2.0</span><span class="refresh-btn" onclick="forceRefresh()">⟳ 更新を確認</span></div>
+  <div class="version"><span>v1.3.0</span><span class="refresh-btn" onclick="forceRefresh()">⟳ 更新を確認</span></div>
   <div class="tabs">
     <div class="tab" data-v="stream" onclick="switchVehicle('stream')">Honda Stream RN6</div>
     <div class="tab" data-v="cygnus" onclick="switchVehicle('cygnus')">Cygnus Ray ZR</div>
@@ -130,6 +142,9 @@
 
   <div class="section-title">給油履歴</div>
   <div id="list"></div>
+
+  <div class="section-title">メンテナンス記録<span class="add-link" onclick="openMaintSheet()">＋ 追加</span></div>
+  <div id="maintList"></div>
 </main>
 
 <button class="fab" onclick="openSheet()">＋</button>
@@ -161,6 +176,38 @@
   </div>
 </div>
 
+<div class="sheet-backdrop" id="maintBackdrop" onclick="closeMaintSheet()"></div>
+<div class="sheet" id="maintSheet">
+  <div class="sheet-handle"></div>
+  <h2 id="maintSheetTitle">メンテナンス記録を追加</h2>
+  <div class="type-chip" id="typeChip">
+    <div class="active" data-t="tire" onclick="selectMaintType('tire')">タイヤ交換</div>
+    <div data-t="oil" onclick="selectMaintType('oil')">オイル交換</div>
+    <div data-t="other" onclick="selectMaintType('other')">その他</div>
+  </div>
+  <div class="field">
+    <label>日付</label>
+    <input type="date" id="mInDate">
+  </div>
+  <div class="field">
+    <label>走行距離(オドメーター) km</label>
+    <input type="number" id="mInOdo" inputmode="decimal" placeholder="例: 45230">
+  </div>
+  <div class="field">
+    <label>金額 円(任意)</label>
+    <input type="number" id="mInPrice" inputmode="numeric" placeholder="例: 8000">
+  </div>
+  <div class="field">
+    <label>メモ(任意)</label>
+    <input type="text" id="mInMemo" placeholder="例: 前後タイヤ、店舗名など">
+  </div>
+  <div class="sheet-actions">
+    <button class="btn btn-delete" id="maintSheetDeleteBtn" onclick="deleteMaintFromSheet()" style="display:none;">削除</button>
+    <button class="btn btn-cancel" onclick="closeMaintSheet()">キャンセル</button>
+    <button class="btn btn-save" onclick="saveMaintEntry()">保存</button>
+  </div>
+</div>
+
 <script>
 const VEHICLES = {
   stream: { name: 'Honda Stream RN6', accent: '#e8a33d' },
@@ -168,14 +215,19 @@ const VEHICLES = {
 };
 const STORAGE_KEY = 'fuelmate:entries:v1';
 let current = 'stream';
-let data = { stream: [], cygnus: [] };
+let data = { stream: [], cygnus: [], maintenance: { stream: [], cygnus: [] } };
 let editingId = null;
+let maintEditingId = null;
+let maintType = 'tire';
 
 function loadData(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
     if(raw) data = JSON.parse(raw);
   }catch(e){ console.error('load error', e); }
+  if(!data.maintenance) data.maintenance = { stream: [], cygnus: [] };
+  if(!data.maintenance.stream) data.maintenance.stream = [];
+  if(!data.maintenance.cygnus) data.maintenance.cygnus = [];
 }
 function persist(){
   try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
@@ -236,6 +288,7 @@ function render(){
       <div class="del" onclick="deleteEntry('${e.id}')">✕</div>
     </div>`;
   }).join('');
+  renderMaint();
 }
 
 function formatDate(d){
@@ -313,6 +366,109 @@ function deleteFromSheet(){
   if(editingId){
     deleteEntry(editingId);
     closeSheet();
+  }
+}
+
+const MAINT_LABELS = { tire: 'タイヤ交換', oil: 'オイル交換', other: 'その他' };
+
+function renderMaint(){
+  const list = document.getElementById('maintList');
+  const entries = [...data.maintenance[current]].sort((a,b)=> b.odo - a.odo);
+  if(entries.length === 0){
+    list.innerHTML = '<div class="empty">まだ記録がありません。「＋ 追加」から登録してください。</div>';
+    return;
+  }
+  list.innerHTML = entries.map(e=>{
+    const priceStr = e.price ? ` ・ ¥${Number(e.price).toLocaleString()}` : '';
+    const memoStr = e.memo ? ` ・ ${e.memo}` : '';
+    return `<div class="maint-entry" onclick="editMaintEntry('${e.id}')">
+      <div class="date">${formatDate(e.date)}</div>
+      <div class="mid">
+        <div class="type">${MAINT_LABELS[e.type] || 'その他'}</div>
+        <div class="detail">${e.odo.toLocaleString()} km${priceStr}${memoStr}</div>
+      </div>
+      <div class="del" onclick="event.stopPropagation(); deleteMaintEntry('${e.id}')">✕</div>
+    </div>`;
+  }).join('');
+}
+
+function selectMaintType(t){
+  maintType = t;
+  document.querySelectorAll('#typeChip div').forEach(d=>d.classList.toggle('active', d.dataset.t===t));
+}
+
+function openMaintSheet(){
+  maintEditingId = null;
+  document.getElementById('maintSheetTitle').textContent = 'メンテナンス記録を追加';
+  document.getElementById('maintSheetDeleteBtn').style.display = 'none';
+  selectMaintType('tire');
+  document.getElementById('mInDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('mInOdo').value = '';
+  document.getElementById('mInPrice').value = '';
+  document.getElementById('mInMemo').value = '';
+  document.getElementById('maintBackdrop').classList.add('open');
+  document.getElementById('maintSheet').classList.add('open');
+}
+function closeMaintSheet(){
+  maintEditingId = null;
+  document.getElementById('maintBackdrop').classList.remove('open');
+  document.getElementById('maintSheet').classList.remove('open');
+}
+
+function editMaintEntry(id){
+  const entry = data.maintenance[current].find(e=>e.id===id);
+  if(!entry) return;
+  maintEditingId = id;
+  document.getElementById('maintSheetTitle').textContent = 'メンテナンス記録を編集';
+  document.getElementById('maintSheetDeleteBtn').style.display = 'block';
+  selectMaintType(entry.type || 'other');
+  document.getElementById('mInDate').value = entry.date;
+  document.getElementById('mInOdo').value = entry.odo;
+  document.getElementById('mInPrice').value = entry.price != null ? entry.price : '';
+  document.getElementById('mInMemo').value = entry.memo || '';
+  document.getElementById('maintBackdrop').classList.add('open');
+  document.getElementById('maintSheet').classList.add('open');
+}
+
+function saveMaintEntry(){
+  const date = document.getElementById('mInDate').value;
+  const odo = parseFloat(document.getElementById('mInOdo').value);
+  const price = document.getElementById('mInPrice').value;
+  const memo = document.getElementById('mInMemo').value.trim();
+  if(!date || isNaN(odo)){
+    alert('日付・走行距離を正しく入力してください');
+    return;
+  }
+  if(maintEditingId){
+    const entry = data.maintenance[current].find(e=>e.id===maintEditingId);
+    if(entry){
+      entry.date = date; entry.odo = odo; entry.type = maintType;
+      entry.price = price ? parseFloat(price) : null;
+      entry.memo = memo || null;
+    }
+  } else {
+    data.maintenance[current].push({
+      id: Date.now().toString(36),
+      date, odo, type: maintType,
+      price: price ? parseFloat(price) : null,
+      memo: memo || null
+    });
+  }
+  persist();
+  closeMaintSheet();
+  renderMaint();
+}
+
+function deleteMaintEntry(id){
+  data.maintenance[current] = data.maintenance[current].filter(e=>e.id!==id);
+  persist();
+  renderMaint();
+}
+
+function deleteMaintFromSheet(){
+  if(maintEditingId){
+    deleteMaintEntry(maintEditingId);
+    closeMaintSheet();
   }
 }
 
