@@ -123,7 +123,7 @@
 
 <header>
   <h1>燃費・走行距離ログ</h1>
-  <div class="version"><span>v1.5.0</span><span class="refresh-btn" onclick="forceRefresh()">⟳ 更新を確認</span></div>
+  <div class="version"><span>v1.5.1</span><span class="refresh-btn" onclick="forceRefresh()">⟳ 更新を確認</span></div>
   <div class="tabs">
     <div class="tab" data-v="cygnus" onclick="switchVehicle('cygnus')">Cygnus Ray ZR</div>
     <div class="tab" data-v="stream" onclick="switchVehicle('stream')">Honda Stream RN6</div>
@@ -147,12 +147,12 @@
   </div>
 
   <div class="section-title">燃費推移</div>
-  <div class="chart-card" id="kmlChartCard"><svg id="kmlChart" viewBox="0 0 320 140" preserveAspectRatio="none"></svg></div>
+  <div class="chart-card" id="kmlChartCard"><svg id="kmlChart" viewBox="0 0 320 170" preserveAspectRatio="none"></svg></div>
 
   <div class="section-title">月別支出</div>
   <div class="chart-card" id="costChartCard">
     <div class="legend"><span class="dot" style="background:var(--accent)"></span>給油<span class="dot" style="background:var(--maint-color)"></span>メンテナンス</div>
-    <svg id="costChart" viewBox="0 0 320 150" preserveAspectRatio="none"></svg>
+    <svg id="costChart" viewBox="0 0 320 160" preserveAspectRatio="none"></svg>
   </div>
 
   <div class="section-title">給油履歴</div>
@@ -399,25 +399,29 @@ function renderKmlChart(entries){
     pts0.push(kml);
   }
   if(pts0.length < 2){
-    svg.innerHTML = `<text x="160" y="72" fill="var(--muted)" font-size="11" text-anchor="middle">記録が3件以上になると表示されます</text>`;
+    svg.innerHTML = `<text x="160" y="80" fill="var(--muted)" font-size="11" text-anchor="middle">記録が3件以上になると表示されます</text>`;
     return;
   }
-  const W=320,H=140,pad=14;
+  const W=320,H=170,padX=16,padTop=26,padBottom=20;
   const min = Math.min(...pts0), max = Math.max(...pts0);
   const range = (max-min) || 1;
-  const stepX = (W-2*pad)/(pts0.length-1);
+  const stepX = (W-2*padX)/(pts0.length-1);
   const accent = (getComputedStyle(document.documentElement).getPropertyValue('--accent') || '').trim() || '#e8a33d';
+  const usableH = H-padTop-padBottom;
   const pts = pts0.map((kml,i)=>({
-    x: pad + i*stepX,
-    y: H-pad - ((kml-min)/range)*(H-2*pad),
+    x: padX + i*stepX,
+    y: H-padBottom - ((kml-min)/range)*usableH,
     kml
   }));
   const poly = pts.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
   const dots = pts.map(p=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" fill="${accent}"/>`).join('');
-  const maxIdx = pts0.indexOf(max), minIdx = pts0.indexOf(min);
-  const maxLabel = `<text x="${pts[maxIdx].x.toFixed(1)}" y="${(pts[maxIdx].y-7).toFixed(1)}" font-size="9" fill="var(--muted)" text-anchor="middle">${max.toFixed(1)}</text>`;
-  const minLabel = `<text x="${pts[minIdx].x.toFixed(1)}" y="${(pts[minIdx].y+15).toFixed(1)}" font-size="9" fill="var(--muted)" text-anchor="middle">${min.toFixed(1)}</text>`;
-  svg.innerHTML = `<polyline points="${poly}" fill="none" stroke="${accent}" stroke-width="2"/>${dots}${maxLabel}${minLabel}`;
+  const labels = pts.map((p,i)=>{
+    const above = p.y > padTop + 12;
+    const ly = above ? p.y - 8 : p.y + 15;
+    return `<text x="${p.x.toFixed(1)}" y="${ly.toFixed(1)}" font-size="9" fill="var(--muted)" text-anchor="middle">${p.kml.toFixed(1)}</text>`;
+  }).join('');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.innerHTML = `<polyline points="${poly}" fill="none" stroke="${accent}" stroke-width="2"/>${dots}${labels}`;
 }
 
 function renderCostChart(entries){
@@ -440,7 +444,7 @@ function renderCostChart(entries){
     svg.innerHTML = `<text x="160" y="78" fill="var(--muted)" font-size="11" text-anchor="middle">金額付きの記録がまだありません</text>`;
     return;
   }
-  const W=320,H=150,padB=22,padT=12,padSide=12;
+  const W=320,H=160,padB=22,padT=30,padSide=12;
   const maxTotal = Math.max(...months.map(m=>monthMap[m].fuel+monthMap[m].maint), 1);
   const bw = (W-2*padSide)/months.length;
   const barW = Math.min(bw*0.5, 34);
@@ -456,13 +460,17 @@ function renderCostChart(entries){
     const maintH = totalH - fuelH;
     const x = cx - barW/2;
     const yBottom = H - padB;
+    const yTop = yBottom - totalH;
     bars += `<rect x="${x.toFixed(1)}" y="${(yBottom-fuelH).toFixed(1)}" width="${barW.toFixed(1)}" height="${fuelH.toFixed(1)}" fill="${accent}" rx="3"/>`;
     if(maintH > 0){
-      bars += `<rect x="${x.toFixed(1)}" y="${(yBottom-totalH).toFixed(1)}" width="${barW.toFixed(1)}" height="${maintH.toFixed(1)}" fill="${maintColor}" rx="3"/>`;
+      bars += `<rect x="${x.toFixed(1)}" y="${yTop.toFixed(1)}" width="${barW.toFixed(1)}" height="${maintH.toFixed(1)}" fill="${maintColor}" rx="3"/>`;
     }
+    const totalLabel = '¥' + Math.round(total).toLocaleString();
+    bars += `<text x="${cx.toFixed(1)}" y="${(yTop-6).toFixed(1)}" font-size="10" font-weight="700" fill="var(--text)" text-anchor="middle">${totalLabel}</text>`;
     const label = m.slice(5,7) + '月';
     bars += `<text x="${cx.toFixed(1)}" y="${H-6}" font-size="9" fill="var(--muted)" text-anchor="middle">${label}</text>`;
   });
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   svg.innerHTML = bars;
 }
 
