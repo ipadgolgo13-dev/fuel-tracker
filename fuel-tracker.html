@@ -30,6 +30,7 @@
 
   header{padding:calc(env(safe-area-inset-top) + 18px) 20px 12px;}
   header h1{font-size:15px; font-weight:600; letter-spacing:.08em; color:var(--muted); margin:0 0 14px; text-transform:uppercase;}
+  .version{font-size:10px; color:var(--muted); opacity:.6; letter-spacing:.05em; margin:-10px 0 14px;}
 
   .tabs{display:flex; gap:8px;}
   .tab{flex:1; padding:10px 8px; border-radius:12px; background:var(--panel); border:1px solid var(--line);
@@ -99,6 +100,7 @@
 
 <header>
   <h1>燃費・走行距離ログ</h1>
+  <div class="version">v1.2.0</div>
   <div class="tabs">
     <div class="tab" data-v="stream" onclick="switchVehicle('stream')">Honda Stream RN6</div>
     <div class="tab" data-v="cygnus" onclick="switchVehicle('cygnus')">Cygnus Ray ZR</div>
