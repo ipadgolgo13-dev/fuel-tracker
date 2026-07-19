@@ -23,6 +23,7 @@
     --amber:#e8a33d;
     --teal:#4fb3a9;
     --danger:#d64550;
+    --maint-color:#8a7fd6;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
@@ -60,6 +61,11 @@
   .section-title{font-size:12px; color:var(--muted); letter-spacing:.1em; text-transform:uppercase;
     margin:26px 0 10px; display:flex; justify-content:space-between; align-items:center;}
   .add-link{color:var(--accent); font-size:12px; letter-spacing:0; text-transform:none; font-weight:700;}
+  .chart-card{padding:16px 14px 10px; border-radius:16px; background:var(--panel); border:1px solid var(--line); margin-bottom:8px;}
+  .chart-card svg{width:100%; height:auto; display:block; overflow:visible;}
+  .legend{display:flex; gap:14px; font-size:11px; color:var(--muted); margin-bottom:10px;}
+  .legend .dot{display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:5px; vertical-align:middle;}
+  .chart-empty{text-align:center; color:var(--muted); font-size:12px; padding:20px 0;}
   .maint-entry{display:flex; align-items:center; gap:12px; padding:13px 14px; border-radius:14px; background:var(--panel);
     border:1px solid var(--line); margin-bottom:8px; cursor:pointer;}
   .maint-entry .date{font-size:11px; color:var(--muted); width:64px; flex-shrink:0; line-height:1.3;}
@@ -117,7 +123,7 @@
 
 <header>
   <h1>燃費・走行距離ログ</h1>
-  <div class="version"><span>v1.4.0</span><span class="refresh-btn" onclick="forceRefresh()">⟳ 更新を確認</span></div>
+  <div class="version"><span>v1.5.0</span><span class="refresh-btn" onclick="forceRefresh()">⟳ 更新を確認</span></div>
   <div class="tabs">
     <div class="tab" data-v="cygnus" onclick="switchVehicle('cygnus')">Cygnus Ray ZR</div>
     <div class="tab" data-v="stream" onclick="switchVehicle('stream')">Honda Stream RN6</div>
@@ -138,6 +144,15 @@
       <div class="backup-btn" onclick="document.getElementById('importFile').click()">⬇ 読み込み</div>
     </div>
     <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importBackup(event)">
+  </div>
+
+  <div class="section-title">燃費推移</div>
+  <div class="chart-card" id="kmlChartCard"><svg id="kmlChart" viewBox="0 0 320 140" preserveAspectRatio="none"></svg></div>
+
+  <div class="section-title">月別支出</div>
+  <div class="chart-card" id="costChartCard">
+    <div class="legend"><span class="dot" style="background:var(--accent)"></span>給油<span class="dot" style="background:var(--maint-color)"></span>メンテナンス</div>
+    <svg id="costChart" viewBox="0 0 320 150" preserveAspectRatio="none"></svg>
   </div>
 
   <div class="section-title">給油履歴</div>
@@ -266,6 +281,9 @@ function render(){
   const list = document.getElementById('list');
   if(entries.length === 0){
     list.innerHTML = '<div class="empty">まだ記録がありません。右下の＋から給油記録を追加してください。</div>';
+    renderKmlChart(entries);
+    renderCostChart(entries);
+    renderMaint();
     return;
   }
   const sortedDesc = [...entries].sort((a,b)=> b.odo - a.odo);
@@ -289,6 +307,8 @@ function render(){
       <div class="del" onclick="deleteEntry('${e.id}')">✕</div>
     </div>`;
   }).join('');
+  renderKmlChart(entries);
+  renderCostChart(entries);
   renderMaint();
 }
 
@@ -368,6 +388,82 @@ function deleteFromSheet(){
     deleteEntry(editingId);
     closeSheet();
   }
+}
+
+function renderKmlChart(entries){
+  const svg = document.getElementById('kmlChart');
+  const pts0 = [];
+  for(let i=1;i<entries.length;i++){
+    const dist = entries[i].odo - entries[i-1].odo;
+    const kml = entries[i].liters > 0 ? dist/entries[i].liters : 0;
+    pts0.push(kml);
+  }
+  if(pts0.length < 2){
+    svg.innerHTML = `<text x="160" y="72" fill="var(--muted)" font-size="11" text-anchor="middle">記録が3件以上になると表示されます</text>`;
+    return;
+  }
+  const W=320,H=140,pad=14;
+  const min = Math.min(...pts0), max = Math.max(...pts0);
+  const range = (max-min) || 1;
+  const stepX = (W-2*pad)/(pts0.length-1);
+  const accent = (getComputedStyle(document.documentElement).getPropertyValue('--accent') || '').trim() || '#e8a33d';
+  const pts = pts0.map((kml,i)=>({
+    x: pad + i*stepX,
+    y: H-pad - ((kml-min)/range)*(H-2*pad),
+    kml
+  }));
+  const poly = pts.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+  const dots = pts.map(p=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" fill="${accent}"/>`).join('');
+  const maxIdx = pts0.indexOf(max), minIdx = pts0.indexOf(min);
+  const maxLabel = `<text x="${pts[maxIdx].x.toFixed(1)}" y="${(pts[maxIdx].y-7).toFixed(1)}" font-size="9" fill="var(--muted)" text-anchor="middle">${max.toFixed(1)}</text>`;
+  const minLabel = `<text x="${pts[minIdx].x.toFixed(1)}" y="${(pts[minIdx].y+15).toFixed(1)}" font-size="9" fill="var(--muted)" text-anchor="middle">${min.toFixed(1)}</text>`;
+  svg.innerHTML = `<polyline points="${poly}" fill="none" stroke="${accent}" stroke-width="2"/>${dots}${maxLabel}${minLabel}`;
+}
+
+function renderCostChart(entries){
+  const svg = document.getElementById('costChart');
+  const monthMap = {};
+  entries.forEach(e=>{
+    if(!e.price) return;
+    const m = e.date.slice(0,7);
+    if(!monthMap[m]) monthMap[m] = {fuel:0, maint:0};
+    monthMap[m].fuel += Number(e.price);
+  });
+  (data.maintenance[current] || []).forEach(e=>{
+    if(!e.price) return;
+    const m = e.date.slice(0,7);
+    if(!monthMap[m]) monthMap[m] = {fuel:0, maint:0};
+    monthMap[m].maint += Number(e.price);
+  });
+  const months = Object.keys(monthMap).sort().slice(-6);
+  if(months.length === 0){
+    svg.innerHTML = `<text x="160" y="78" fill="var(--muted)" font-size="11" text-anchor="middle">金額付きの記録がまだありません</text>`;
+    return;
+  }
+  const W=320,H=150,padB=22,padT=12,padSide=12;
+  const maxTotal = Math.max(...months.map(m=>monthMap[m].fuel+monthMap[m].maint), 1);
+  const bw = (W-2*padSide)/months.length;
+  const barW = Math.min(bw*0.5, 34);
+  const accent = (getComputedStyle(document.documentElement).getPropertyValue('--accent') || '').trim() || '#e8a33d';
+  const maintColor = (getComputedStyle(document.documentElement).getPropertyValue('--maint-color') || '').trim() || '#8a7fd6';
+  let bars = '';
+  months.forEach((m,i)=>{
+    const cx = padSide + bw*i + bw/2;
+    const {fuel, maint} = monthMap[m];
+    const total = fuel + maint;
+    const totalH = (total/maxTotal) * (H-padT-padB);
+    const fuelH = total > 0 ? (fuel/total)*totalH : 0;
+    const maintH = totalH - fuelH;
+    const x = cx - barW/2;
+    const yBottom = H - padB;
+    bars += `<rect x="${x.toFixed(1)}" y="${(yBottom-fuelH).toFixed(1)}" width="${barW.toFixed(1)}" height="${fuelH.toFixed(1)}" fill="${accent}" rx="3"/>`;
+    if(maintH > 0){
+      bars += `<rect x="${x.toFixed(1)}" y="${(yBottom-totalH).toFixed(1)}" width="${barW.toFixed(1)}" height="${maintH.toFixed(1)}" fill="${maintColor}" rx="3"/>`;
+    }
+    const label = m.slice(5,7) + '月';
+    bars += `<text x="${cx.toFixed(1)}" y="${H-6}" font-size="9" fill="var(--muted)" text-anchor="middle">${label}</text>`;
+  });
+  svg.innerHTML = bars;
 }
 
 const MAINT_LABELS = { tire: 'タイヤ交換', oil: 'オイル交換', other: 'その他' };
@@ -457,13 +553,13 @@ function saveMaintEntry(){
   }
   persist();
   closeMaintSheet();
-  renderMaint();
+  render();
 }
 
 function deleteMaintEntry(id){
   data.maintenance[current] = data.maintenance[current].filter(e=>e.id!==id);
   persist();
-  renderMaint();
+  render();
 }
 
 function deleteMaintFromSheet(){
