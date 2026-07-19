@@ -178,7 +178,7 @@ function persist(){
 function switchVehicle(v){
   current = v;
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.v===v));
-  document.documentElement.style.setProperty('--accent-global', VEHICLES[v].accent);
+  document.documentElement.style.setProperty('--accent', VEHICLES[v].accent);
   document.getElementById('gauge').style.setProperty('--accent', VEHICLES[v].accent);
   render();
 }
