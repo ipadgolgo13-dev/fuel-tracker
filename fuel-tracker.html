@@ -53,6 +53,10 @@
 
   .section-title{font-size:12px; color:var(--muted); letter-spacing:.1em; text-transform:uppercase;
     margin:26px 0 10px; display:flex; justify-content:space-between; align-items:center;}
+  .backup-bar{display:flex; gap:8px; margin-top:14px;}
+  .backup-btn{flex:1; padding:10px; border-radius:12px; background:var(--panel); border:1px solid var(--line);
+    color:var(--muted); font-size:12px; font-weight:600; text-align:center;}
+  .backup-btn:active{transform:scale(.97);}
 
   .entry{display:flex; align-items:center; gap:12px; padding:13px 14px; border-radius:14px; background:var(--panel);
     border:1px solid var(--line); margin-bottom:8px;}
@@ -67,9 +71,9 @@
 
   .empty{text-align:center; padding:40px 20px; color:var(--muted); font-size:13px; line-height:1.7;}
 
-  .fab{position:fixed; right:20px; bottom:calc(env(safe-area-inset-bottom) + 24px); width:56px; height:56px;
+  .fab{position:fixed; right:20px; bottom:calc(env(safe-area-inset-bottom) + 32px); width:56px; height:56px;
     border-radius:50%; background:var(--accent); color:#14161a; border:none; font-size:28px; font-weight:400;
-    box-shadow:0 6px 20px rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center;}
+    box-shadow:0 6px 20px rgba(0,0,0,.4); display:flex; align-items:center; justify-content:center; z-index:20;}
   .fab:active{transform:scale(.94);}
 
   .sheet-backdrop{position:fixed; inset:0; background:rgba(0,0,0,.55); opacity:0; pointer-events:none; transition:.2s; z-index:10;}
@@ -110,6 +114,11 @@
       <div><div class="k">総給油量</div><div class="v odo-font" id="totalLiters">--</div></div>
       <div><div class="k">記録数</div><div class="v odo-font" id="entryCount">--</div></div>
     </div>
+    <div class="backup-bar">
+      <div class="backup-btn" onclick="exportBackup()">⬆ バックアップ書き出し</div>
+      <div class="backup-btn" onclick="document.getElementById('importFile').click()">⬇ 読み込み</div>
+    </div>
+    <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importBackup(event)">
   </div>
 
   <div class="section-title">給油履歴</div>
@@ -298,6 +307,40 @@ function deleteFromSheet(){
     deleteEntry(editingId);
     closeSheet();
   }
+}
+
+function exportBackup(){
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const ts = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = `fuel-tracker-backup-${ts}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function importBackup(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const parsed = JSON.parse(reader.result);
+      if(!parsed.stream || !parsed.cygnus) throw new Error('invalid format');
+      if(!confirm('バックアップを読み込むと、現在のデータは上書きされます。よろしいですか？')) return;
+      data = parsed;
+      persist();
+      render();
+      alert('バックアップを読み込みました');
+    }catch(e){
+      alert('ファイルの読み込みに失敗しました。正しいバックアップファイルか確認してください。');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
 }
 
 loadData();
