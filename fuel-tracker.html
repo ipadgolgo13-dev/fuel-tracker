@@ -11,6 +11,7 @@
 <meta name="apple-mobile-web-app-title" content="燃費ログ">
 <meta name="theme-color" content="#14161a">
 <title>燃費・走行距離ログ</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2314161a'/%3E%3Ctext x='50' y='62' font-size='46' text-anchor='middle' fill='%23e8a33d' font-family='monospace' font-weight='bold'%3EL/km%3C/text%3E%3C/svg%3E">
 <style>
   :root{
@@ -117,13 +118,40 @@
   .btn-cancel{background:var(--panel); color:var(--muted); border:1px solid var(--line);}
   .btn-save{background:var(--accent); color:#14161a;}
   .btn-delete{background:transparent; color:var(--danger); border:1px solid var(--danger); flex:0 0 auto; padding:13px 16px;}
+
+  .auth-overlay{position:fixed; inset:0; background:var(--bg); z-index:100; display:flex; align-items:center; justify-content:center; padding:24px;}
+  .auth-card{width:100%; max-width:360px; padding:28px 24px; border-radius:20px; background:var(--panel); border:1px solid var(--line);}
+  .auth-card h2{font-size:18px; margin:0 0 8px;}
+  .auth-card p{font-size:13px; color:var(--muted); margin:0 0 20px; line-height:1.6;}
+  .auth-card input{width:100%; padding:12px 14px; border-radius:12px; background:var(--panel-raised); border:1px solid var(--line);
+    color:var(--text); font-size:16px; margin-bottom:12px;}
+  .auth-card input:focus{outline:none; border-color:#e8a33d;}
+  .auth-card button{width:100%; padding:13px; border-radius:12px; border:none; background:#e8a33d; color:#14161a;
+    font-size:15px; font-weight:600;}
+  .auth-card button:active{transform:scale(.98);}
+  .auth-status{font-size:12px; color:var(--muted); margin-top:12px; text-align:center; line-height:1.6; min-height:14px;}
+  .logout-link{color:var(--muted); opacity:.8; font-size:10px; padding:4px 10px; border-radius:8px; border:1px solid var(--line); background:var(--panel); margin-left:6px;}
 </style>
 </head>
 <body>
 
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-card">
+    <h2>ログイン</h2>
+    <p>メールアドレスを入力すると、8桁のログインコードが届きます。</p>
+    <input type="email" id="authEmail" placeholder="メールアドレス" autocomplete="email" autocapitalize="off">
+    <button onclick="sendMagicLink()">コードを送信</button>
+    <div id="authCodeArea" style="display:none; margin-top:14px;">
+      <input type="text" id="authCode" placeholder="8桁のコード" inputmode="numeric" maxlength="8" autocomplete="one-time-code">
+      <button onclick="verifyCode()">ログイン</button>
+    </div>
+    <div class="auth-status" id="authStatus"></div>
+  </div>
+</div>
+
 <header>
   <h1>燃費・走行距離ログ</h1>
-  <div class="version"><span>v1.5.1</span><span class="refresh-btn" onclick="forceRefresh()">⟳ 更新を確認</span></div>
+  <div class="version"><span>v1.6.0</span><span><span class="refresh-btn" onclick="forceRefresh()">⟳ 更新を確認</span><span class="logout-link" onclick="logout()">ログアウト</span></span></div>
   <div class="tabs">
     <div class="tab" data-v="cygnus" onclick="switchVehicle('cygnus')">Cygnus Ray ZR</div>
     <div class="tab" data-v="stream" onclick="switchVehicle('stream')">Honda Stream RN6</div>
@@ -240,13 +268,107 @@ function loadData(){
     const raw = localStorage.getItem(STORAGE_KEY);
     if(raw) data = JSON.parse(raw);
   }catch(e){ console.error('load error', e); }
+  ensureShape();
+}
+function ensureShape(){
   if(!data.maintenance) data.maintenance = { stream: [], cygnus: [] };
   if(!data.maintenance.stream) data.maintenance.stream = [];
   if(!data.maintenance.cygnus) data.maintenance.cygnus = [];
 }
-function persist(){
+function persistLocal(){
   try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
   catch(e){ console.error('save error', e); }
+}
+function persist(){
+  persistLocal();
+  syncToCloud();
+}
+
+// ---- Supabase 連携 ----
+const SUPABASE_URL = 'https://opwszhsigwwqijcufrby.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_3k7z9MeHwzp53f7gp6u2JA_7feXPOP9';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let currentUser = null;
+
+async function initAuth(){
+  const { data: sessionData } = await sb.auth.getSession();
+  handleSession(sessionData.session);
+  sb.auth.onAuthStateChange((_event, session) => { handleSession(session); });
+}
+
+function handleSession(session){
+  if(session && session.user){
+    currentUser = session.user;
+    document.getElementById('authOverlay').style.display = 'none';
+    startApp();
+  } else {
+    currentUser = null;
+    document.getElementById('authOverlay').style.display = 'flex';
+  }
+}
+
+async function sendMagicLink(){
+  const email = document.getElementById('authEmail').value.trim();
+  const statusEl = document.getElementById('authStatus');
+  if(!email){ statusEl.textContent = 'メールアドレスを入力してください'; return; }
+  statusEl.textContent = '送信中…';
+  const { error } = await sb.auth.signInWithOtp({ email });
+  if(error){
+    statusEl.textContent = '送信に失敗しました: ' + error.message;
+  } else {
+    statusEl.textContent = 'コードを送信しました。メールに届いた8桁のコードを入力してください。';
+    document.getElementById('authCodeArea').style.display = 'block';
+  }
+}
+
+async function verifyCode(){
+  const email = document.getElementById('authEmail').value.trim();
+  const token = document.getElementById('authCode').value.trim();
+  const statusEl = document.getElementById('authStatus');
+  if(!token){ statusEl.textContent = 'コードを入力してください'; return; }
+  statusEl.textContent = '確認中…';
+  const { error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
+  if(error){
+    statusEl.textContent = 'コードが正しくありません: ' + error.message;
+  }
+}
+
+async function logout(){
+  await sb.auth.signOut();
+}
+
+async function loadFromCloud(){
+  try{
+    const { data: row, error } = await sb.from('user_data').select('data').eq('user_id', currentUser.id).maybeSingle();
+    if(error) throw error;
+    if(row && row.data && Object.keys(row.data).length){
+      data = row.data;
+      ensureShape();
+      persistLocal();
+    } else {
+      await syncToCloud();
+    }
+  }catch(e){
+    console.error('cloud load error', e);
+  }
+}
+
+async function syncToCloud(){
+  if(!currentUser) return;
+  try{
+    await sb.from('user_data').upsert({ user_id: currentUser.id, data, updated_at: new Date().toISOString() });
+  }catch(e){ console.error('cloud save error', e); }
+}
+
+async function startApp(){
+  loadData();
+  await loadFromCloud();
+  let lastVehicle = 'cygnus';
+  try{
+    const saved = localStorage.getItem('fuelmate:lastVehicle');
+    if(saved === 'stream' || saved === 'cygnus') lastVehicle = saved;
+  }catch(e){}
+  switchVehicle(lastVehicle);
 }
 
 function switchVehicle(v){
@@ -615,13 +737,7 @@ function importBackup(event){
   event.target.value = '';
 }
 
-loadData();
-let lastVehicle = 'cygnus';
-try{
-  const saved = localStorage.getItem('fuelmate:lastVehicle');
-  if(saved === 'stream' || saved === 'cygnus') lastVehicle = saved;
-}catch(e){}
-switchVehicle(lastVehicle);
+initAuth();
 </script>
 </body>
 </html>
