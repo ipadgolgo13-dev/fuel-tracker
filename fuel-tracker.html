@@ -38,17 +38,28 @@
 
   header{padding:calc(env(safe-area-inset-top) + 18px) 20px 12px;}
   header h1{font-size:15px; font-weight:600; letter-spacing:.08em; color:var(--muted); margin:0 0 14px; text-transform:uppercase;}
-  .version{font-size:10px; color:var(--muted); opacity:.6; letter-spacing:.05em; margin:-10px 0 14px; display:flex; align-items:center; justify-content:space-between;}
+  .version{font-size:10px; color:var(--muted); opacity:.6; letter-spacing:.05em; margin:-10px 0 14px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px;}
   .refresh-btn{color:var(--muted); opacity:.8; font-size:10px; padding:4px 10px; border-radius:8px; border:1px solid var(--line); background:var(--panel);}
   .refresh-btn:active{transform:scale(.95);}
 
-  .tabs{display:flex; gap:8px;}
-  .tab{flex:1; padding:10px 8px; border-radius:12px; background:var(--panel); border:1px solid var(--line);
-    text-align:center; font-size:14px; font-weight:600; color:var(--muted); transition:.15s;}
-  .tab.active[data-v="stream"]{background:rgba(232,163,61,.12); border-color:var(--amber); color:var(--amber);}
-  .tab.active[data-v="cygnus"]{background:rgba(79,179,169,.12); border-color:var(--teal); color:var(--teal);}
+  .tabs{display:flex; gap:8px; overflow-x:auto; padding-bottom:2px;}
+  .tab{flex:1 0 auto; min-width:96px; padding:10px 12px; border-radius:12px; background:var(--panel); border:1px solid var(--line);
+    text-align:center; font-size:14px; font-weight:600; color:var(--muted); transition:.15s; position:relative; white-space:nowrap;}
+  .tab.active{border-color:var(--tab-accent, var(--accent)); color:var(--tab-accent, var(--accent)); background:var(--tab-bg, rgba(255,255,255,.04));}
+  .tab-add{flex:0 0 44px; padding:10px; border-radius:12px; background:var(--panel); border:1px dashed var(--line);
+    text-align:center; font-size:16px; font-weight:600; color:var(--muted);}
+  .tab-add:active{transform:scale(.95);}
+  .tab-edit-icon{position:absolute; top:-6px; right:-6px; width:18px; height:18px; border-radius:50%; background:var(--panel-raised);
+    border:1px solid var(--line); font-size:10px; display:flex; align-items:center; justify-content:center; color:var(--muted);}
+
+  .subtabs{display:flex; gap:6px; margin-top:14px;}
+  .subtab{flex:1; padding:9px 4px; border-radius:10px; background:var(--panel); border:1px solid var(--line);
+    text-align:center; font-size:12px; font-weight:600; color:var(--muted);}
+  .subtab.active{background:rgba(255,255,255,.05); border-color:var(--accent); color:var(--accent);}
 
   main{padding:0 20px 100px;}
+  .panel{display:none;}
+  .panel.active{display:block;}
 
   .gauge{margin-top:18px; padding:26px 22px; border-radius:20px; background:var(--panel);
     border:1px solid var(--line); position:relative; overflow:hidden;}
@@ -98,6 +109,9 @@
   .entry .mid{cursor:pointer;}
 
   .empty{text-align:center; padding:40px 20px; color:var(--muted); font-size:13px; line-height:1.7;}
+  .empty-vehicles{text-align:center; padding:70px 20px;}
+  .empty-vehicles .btn{margin-top:16px; display:inline-block; padding:13px 22px; border-radius:12px; border:none;
+    background:var(--amber); color:#14161a; font-size:15px; font-weight:600;}
 
   .fab{position:fixed; right:20px; bottom:calc(env(safe-area-inset-bottom) + 32px); width:56px; height:56px;
     border-radius:50%; background:var(--accent); color:#14161a; border:none; font-size:28px; font-weight:400;
@@ -107,7 +121,7 @@
   .sheet-backdrop{position:fixed; inset:0; background:rgba(0,0,0,.55); opacity:0; pointer-events:none; transition:.2s; z-index:10;}
   .sheet-backdrop.open{opacity:1; pointer-events:auto;}
   .sheet{position:fixed; left:0; right:0; bottom:0; background:var(--panel-raised); border-radius:20px 20px 0 0;
-    padding:10px 20px calc(env(safe-area-inset-bottom) + 24px); transform:translateY(100%); transition:.25s cubic-bezier(.32,.72,0,1); z-index:11;}
+    padding:10px 20px calc(env(safe-area-inset-bottom) + 24px); transform:translateY(100%); transition:.25s cubic-bezier(.32,.72,0,1); z-index:11; max-height:88vh; overflow-y:auto;}
   .sheet.open{transform:translateY(0);}
   .sheet-handle{width:36px; height:4px; background:var(--line); border-radius:2px; margin:8px auto 18px;}
   .sheet h2{font-size:16px; margin:0 0 18px;}
@@ -121,6 +135,14 @@
   .btn-cancel{background:var(--panel); color:var(--muted); border:1px solid var(--line);}
   .btn-save{background:var(--accent); color:#14161a;}
   .btn-delete{background:transparent; color:var(--danger); border:1px solid var(--danger); flex:0 0 auto; padding:13px 16px;}
+  .btn-block{width:100%; margin-top:10px;}
+
+  .color-swatches{display:flex; gap:12px; flex-wrap:wrap;}
+  .swatch{width:38px; height:38px; border-radius:50%; border:3px solid transparent; position:relative;}
+  .swatch.selected{border-color:#fff;}
+  .swatch.selected::after{content:"✓"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#14161a; font-weight:700; font-size:14px;}
+
+  .info-note{font-size:12px; color:var(--muted); margin:-4px 0 18px; line-height:1.6;}
 
   .auth-overlay{position:fixed; inset:0; background:var(--bg); z-index:100; display:flex; align-items:center; justify-content:center; padding:24px;}
   .auth-card{width:100%; max-width:360px; padding:28px 24px; border-radius:20px; background:var(--panel); border:1px solid var(--line);}
@@ -158,46 +180,83 @@
 
 <header>
   <h1>燃費・走行距離ログ</h1>
-  <div class="version"><span id="verLabel">v1.6.0</span><span><span class="refresh-btn" onclick="forceRefresh()">⟳ 更新を確認</span><span class="logout-link" onclick="openAccountSheet()">メール変更</span><span class="logout-link" onclick="logout()">ログアウト</span></span></div>
-  <div class="tabs">
-    <div class="tab" data-v="cygnus" onclick="switchVehicle('cygnus')">Cygnus Ray ZR</div>
-    <div class="tab" data-v="stream" onclick="switchVehicle('stream')">Honda Stream RN6</div>
+  <div class="version"><span id="verLabel">v2.0.0</span><span><span class="refresh-btn" onclick="forceRefresh()">⟳ 更新を確認</span><span class="logout-link" onclick="openAccountSheet()">メール変更</span><span class="logout-link" onclick="logout()">ログアウト</span></span></div>
+  <div class="tabs" id="vehicleTabs"></div>
+  <div class="subtabs" id="subTabs" style="display:none;">
+    <div class="subtab active" data-p="fuel" onclick="switchPanel('fuel')">給油</div>
+    <div class="subtab" data-p="maint" onclick="switchPanel('maint')">メンテナンス</div>
+    <div class="subtab" data-p="info" onclick="switchPanel('info')">車両情報</div>
   </div>
 </header>
 
 <main>
-  <div class="gauge" id="gauge">
-    <div class="gauge-label">平均燃費</div>
-    <div class="gauge-value odo-font"><span id="avgKml">--</span><span class="gauge-unit">km/L</span></div>
-    <div class="gauge-sub">
-      <div><div class="k">総走行距離</div><div class="v odo-font" id="totalDist">--</div></div>
-      <div><div class="k">総給油量</div><div class="v odo-font" id="totalLiters">--</div></div>
-      <div><div class="k">記録数</div><div class="v odo-font" id="entryCount">--</div></div>
+  <div class="panel active" id="panelFuel">
+    <div class="gauge" id="gauge">
+      <div class="gauge-label">平均燃費</div>
+      <div class="gauge-value odo-font"><span id="avgKml">--</span><span class="gauge-unit">km/L</span></div>
+      <div class="gauge-sub">
+        <div><div class="k">総走行距離</div><div class="v odo-font" id="totalDist">--</div></div>
+        <div><div class="k">総給油量</div><div class="v odo-font" id="totalLiters">--</div></div>
+        <div><div class="k">記録数</div><div class="v odo-font" id="entryCount">--</div></div>
+      </div>
+      <div class="backup-bar">
+        <div class="backup-btn" onclick="exportBackup()">⬆ バックアップ書き出し</div>
+        <div class="backup-btn" onclick="document.getElementById('importFile').click()">⬇ 読み込み</div>
+      </div>
+      <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importBackup(event)">
     </div>
-    <div class="backup-bar">
-      <div class="backup-btn" onclick="exportBackup()">⬆ バックアップ書き出し</div>
-      <div class="backup-btn" onclick="document.getElementById('importFile').click()">⬇ 読み込み</div>
-    </div>
-    <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importBackup(event)">
+
+    <div class="section-title">燃費推移</div>
+    <div class="chart-card" id="kmlChartCard"><svg id="kmlChart" viewBox="0 0 320 170" preserveAspectRatio="none"></svg></div>
+
+    <div class="section-title">給油履歴</div>
+    <div id="list"></div>
   </div>
 
-  <div class="section-title">燃費推移</div>
-  <div class="chart-card" id="kmlChartCard"><svg id="kmlChart" viewBox="0 0 320 170" preserveAspectRatio="none"></svg></div>
+  <div class="panel" id="panelMaint">
+    <div class="section-title" style="margin-top:18px;">月別支出</div>
+    <div class="chart-card" id="costChartCard">
+      <div class="legend"><span class="dot" style="background:var(--accent)"></span>給油<span class="dot" style="background:var(--oil-color)"></span>オイル交換<span class="dot" style="background:var(--tire-color)"></span>タイヤ交換<span class="dot" style="background:var(--other-color)"></span>その他</div>
+      <svg id="costChart" viewBox="0 0 320 160" preserveAspectRatio="none"></svg>
+    </div>
 
-  <div class="section-title">月別支出</div>
-  <div class="chart-card" id="costChartCard">
-    <div class="legend"><span class="dot" style="background:var(--accent)"></span>給油<span class="dot" style="background:var(--oil-color)"></span>オイル交換<span class="dot" style="background:var(--tire-color)"></span>タイヤ交換<span class="dot" style="background:var(--other-color)"></span>その他</div>
-    <svg id="costChart" viewBox="0 0 320 160" preserveAspectRatio="none"></svg>
+    <div class="section-title">メンテナンス記録<span class="add-link" onclick="openMaintSheet()">＋ 追加</span></div>
+    <div id="maintList"></div>
   </div>
 
-  <div class="section-title">給油履歴</div>
-  <div id="list"></div>
+  <div class="panel" id="panelInfo">
+    <div class="section-title" style="margin-top:18px;">車両情報</div>
+    <div class="info-note">この端末や他の端末で共有される、車両に関するメモです。</div>
+    <div class="field">
+      <label>型式・型番</label>
+      <input type="text" id="infoModel" placeholder="例: RN6 / SE44J">
+    </div>
+    <div class="field">
+      <label>初年度登録</label>
+      <input type="month" id="infoFirstReg">
+    </div>
+    <div class="field">
+      <label>車検有効期限</label>
+      <input type="date" id="infoShaken">
+    </div>
+    <div class="field">
+      <label>タイヤサイズ</label>
+      <input type="text" id="infoTire" placeholder="例: 165/55R15">
+    </div>
+    <button class="btn btn-save btn-block" onclick="saveVehicleInfo()">保存</button>
 
-  <div class="section-title">メンテナンス記録<span class="add-link" onclick="openMaintSheet()">＋ 追加</span></div>
-  <div id="maintList"></div>
+    <div class="section-title" style="margin-top:34px;">車両の設定</div>
+    <button class="btn btn-cancel btn-block" onclick="openVehicleSheet(current)">名前・カラーを編集</button>
+    <button class="btn btn-delete btn-block" onclick="deleteVehicle()">この車両を削除</button>
+  </div>
+
+  <div class="empty-vehicles" id="emptyVehicles" style="display:none;">
+    <div class="empty">まだ車両が登録されていません。<br>最初の車両を追加しましょう。</div>
+    <div class="btn" onclick="openVehicleSheet(null)">＋ 車両を追加</div>
+  </div>
 </main>
 
-<button class="fab" onclick="openSheet()">＋</button>
+<button class="fab" id="fabBtn" onclick="openSheet()">＋</button>
 
 <div class="sheet-backdrop" id="backdrop" onclick="closeSheet()"></div>
 <div class="sheet" id="sheet">
@@ -258,6 +317,24 @@
   </div>
 </div>
 
+<div class="sheet-backdrop" id="vehicleBackdrop" onclick="closeVehicleSheet()"></div>
+<div class="sheet" id="vehicleSheet">
+  <div class="sheet-handle"></div>
+  <h2 id="vehicleSheetTitle">車両を追加</h2>
+  <div class="field">
+    <label>車両名</label>
+    <input type="text" id="vInName" placeholder="例: マイバイク">
+  </div>
+  <div class="field">
+    <label>テーマカラー</label>
+    <div class="color-swatches" id="colorSwatches"></div>
+  </div>
+  <div class="sheet-actions">
+    <button class="btn btn-cancel" onclick="closeVehicleSheet()">キャンセル</button>
+    <button class="btn btn-save" onclick="saveVehicle()">保存</button>
+  </div>
+</div>
+
 <div class="sheet-backdrop" id="accountBackdrop" onclick="closeAccountSheet()"></div>
 <div class="sheet" id="accountSheet">
   <div class="sheet-handle"></div>
@@ -278,20 +355,41 @@
 </div>
 
 <script>
-const APP_VERSION = 'v1.7.0';
+const APP_VERSION = 'v2.0.0';
 document.getElementById('verLabel').textContent = APP_VERSION;
 document.getElementById('authVersion').textContent = APP_VERSION;
 
-const VEHICLES = {
-  stream: { name: 'Honda Stream RN6', accent: '#e8a33d' },
-  cygnus: { name: 'Cygnus Ray ZR',     accent: '#4fb3a9' }
-};
+const MAX_VEHICLES = 4;
+const COLOR_PALETTE = [
+  { id:'amber',  hex:'#e8a33d' },
+  { id:'teal',   hex:'#4fb3a9' },
+  { id:'purple', hex:'#8a7fd6' },
+  { id:'pink',   hex:'#e0708a' },
+  { id:'blue',   hex:'#5b9bd5' },
+  { id:'green',  hex:'#6fbf73' }
+];
+function colorHex(id){
+  const c = COLOR_PALETTE.find(c=>c.id===id);
+  return c ? c.hex : '#e8a33d';
+}
+
 const STORAGE_KEY = 'fuelmate:entries:v1';
-let current = 'stream';
-let data = { stream: [], cygnus: [], maintenance: { stream: [], cygnus: [] } };
+let current = null;
+let activePanel = 'fuel';
+let data = { vehicles: [] };
 let editingId = null;
 let maintEditingId = null;
 let maintType = 'tire';
+let vehicleEditingId = null;
+let selectedColor = COLOR_PALETTE[0].id;
+
+function blankVehicle(id, name, color){
+  return { id, name, color, model:'', firstRegistration:'', shakenDate:'', tireSize:'', entries:[], maintenance:[] };
+}
+
+function curVehicle(){
+  return data.vehicles.find(v=>v.id===current) || null;
+}
 
 function loadData(){
   try{
@@ -300,11 +398,36 @@ function loadData(){
   }catch(e){ console.error('load error', e); }
   ensureShape();
 }
+
 function ensureShape(){
-  if(!data.maintenance) data.maintenance = { stream: [], cygnus: [] };
-  if(!data.maintenance.stream) data.maintenance.stream = [];
-  if(!data.maintenance.cygnus) data.maintenance.cygnus = [];
+  if(!data.vehicles){
+    // 旧形式（stream/cygnus固定）からの移行
+    if(data.stream || data.cygnus){
+      const vehicles = [];
+      const cygnus = blankVehicle('cygnus', 'Cygnus Ray ZR', 'teal');
+      cygnus.entries = data.cygnus || [];
+      cygnus.maintenance = (data.maintenance && data.maintenance.cygnus) || [];
+      vehicles.push(cygnus);
+      const stream = blankVehicle('stream', 'Honda Stream RN6', 'amber');
+      stream.entries = data.stream || [];
+      stream.maintenance = (data.maintenance && data.maintenance.stream) || [];
+      vehicles.push(stream);
+      data = { vehicles };
+    } else {
+      data = { vehicles: [] };
+    }
+  }
+  data.vehicles.forEach(v=>{
+    if(!v.entries) v.entries = [];
+    if(!v.maintenance) v.maintenance = [];
+    if(v.model == null) v.model = '';
+    if(v.firstRegistration == null) v.firstRegistration = '';
+    if(v.shakenDate == null) v.shakenDate = '';
+    if(v.tireSize == null) v.tireSize = '';
+    if(!v.color) v.color = 'amber';
+  });
 }
+
 function persistLocal(){
   try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
   catch(e){ console.error('save error', e); }
@@ -345,8 +468,8 @@ async function sendMagicLink(){
   const { error } = await sb.auth.signInWithOtp({ email });
   if(error){
     const detail = (error.message || '') + ' [status:' + (error.status || '?') + ' code:' + (error.code || '?') + ']';
-  statusEl.textContent = '送信に失敗しました: ' + detail;
-  console.error('signInWithOtp error', error);
+    statusEl.textContent = '送信に失敗しました: ' + detail;
+    console.error('signInWithOtp error', error);
   } else {
     statusEl.textContent = 'コードを送信しました。メールに届いた8桁のコードを入力してください。';
     document.getElementById('authCodeArea').style.display = 'block';
@@ -421,26 +544,175 @@ async function syncToCloud(){
 async function startApp(){
   loadData();
   await loadFromCloud();
-  let lastVehicle = 'cygnus';
+  let lastVehicle = null;
   try{
     const saved = localStorage.getItem('fuelmate:lastVehicle');
-    if(saved === 'stream' || saved === 'cygnus') lastVehicle = saved;
+    if(saved && data.vehicles.some(v=>v.id===saved)) lastVehicle = saved;
   }catch(e){}
+  if(!lastVehicle && data.vehicles.length > 0) lastVehicle = data.vehicles[0].id;
+
+  if(!lastVehicle){
+    current = null;
+    renderVehicleTabs();
+    showEmptyVehicles();
+    return;
+  }
   switchVehicle(lastVehicle);
 }
 
-function switchVehicle(v){
-  current = v;
-  try{ localStorage.setItem('fuelmate:lastVehicle', v); }catch(e){}
-  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.v===v));
-  document.documentElement.style.setProperty('--accent', VEHICLES[v].accent);
-  document.getElementById('gauge').style.setProperty('--accent', VEHICLES[v].accent);
+function showEmptyVehicles(){
+  document.getElementById('subTabs').style.display = 'none';
+  document.getElementById('panelFuel').classList.remove('active');
+  document.getElementById('panelMaint').classList.remove('active');
+  document.getElementById('panelInfo').classList.remove('active');
+  document.getElementById('emptyVehicles').style.display = 'block';
+  document.getElementById('fabBtn').style.display = 'none';
+}
+
+function renderVehicleTabs(){
+  const wrap = document.getElementById('vehicleTabs');
+  let html = data.vehicles.map(v=>{
+    const hex = colorHex(v.color);
+    const isActive = v.id === current;
+    const style = isActive ? ` style="--tab-accent:${hex}; --tab-bg:${hex}1f;"` : '';
+    return `<div class="tab${isActive?' active':''}" data-v="${v.id}"${style} onclick="switchVehicle('${v.id}')">${escapeHtml(v.name)}</div>`;
+  }).join('');
+  if(data.vehicles.length < MAX_VEHICLES){
+    html += `<div class="tab-add" onclick="openVehicleSheet(null)">＋</div>`;
+  }
+  wrap.innerHTML = html;
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function switchVehicle(id){
+  current = id;
+  try{ localStorage.setItem('fuelmate:lastVehicle', id); }catch(e){}
+  document.getElementById('emptyVehicles').style.display = 'none';
+  document.getElementById('subTabs').style.display = 'flex';
+  document.getElementById('fabBtn').style.display = 'flex';
+  renderVehicleTabs();
+  const v = curVehicle();
+  const hex = colorHex(v.color);
+  document.documentElement.style.setProperty('--accent', hex);
+  document.getElementById('gauge').style.setProperty('--accent', hex);
+  switchPanel(activePanel);
   render();
 }
 
+function switchPanel(p){
+  activePanel = p;
+  document.querySelectorAll('.subtab').forEach(t=>t.classList.toggle('active', t.dataset.p===p));
+  document.getElementById('panelFuel').classList.toggle('active', p==='fuel');
+  document.getElementById('panelMaint').classList.toggle('active', p==='maint');
+  document.getElementById('panelInfo').classList.toggle('active', p==='info');
+  const fab = document.getElementById('fabBtn');
+  if(p==='fuel'){ fab.style.display='flex'; fab.onclick=openSheet; }
+  else if(p==='maint'){ fab.style.display='flex'; fab.onclick=openMaintSheet; }
+  else { fab.style.display='none'; }
+  if(p==='info') fillVehicleInfoForm();
+}
+
+function fillVehicleInfoForm(){
+  const v = curVehicle();
+  if(!v) return;
+  document.getElementById('infoModel').value = v.model || '';
+  document.getElementById('infoFirstReg').value = v.firstRegistration || '';
+  document.getElementById('infoShaken').value = v.shakenDate || '';
+  document.getElementById('infoTire').value = v.tireSize || '';
+}
+
+function saveVehicleInfo(){
+  const v = curVehicle();
+  if(!v) return;
+  v.model = document.getElementById('infoModel').value.trim();
+  v.firstRegistration = document.getElementById('infoFirstReg').value;
+  v.shakenDate = document.getElementById('infoShaken').value;
+  v.tireSize = document.getElementById('infoTire').value.trim();
+  persist();
+}
+
+// ---- 車両の追加・編集・削除 ----
+function renderColorSwatches(){
+  const wrap = document.getElementById('colorSwatches');
+  wrap.innerHTML = COLOR_PALETTE.map(c=>{
+    const sel = c.id === selectedColor ? ' selected' : '';
+    return `<div class="swatch${sel}" style="background:${c.hex}" onclick="selectColor('${c.id}')"></div>`;
+  }).join('');
+}
+function selectColor(id){
+  selectedColor = id;
+  renderColorSwatches();
+}
+
+function openVehicleSheet(id){
+  vehicleEditingId = id;
+  if(id){
+    const v = data.vehicles.find(x=>x.id===id);
+    document.getElementById('vehicleSheetTitle').textContent = '車両を編集';
+    document.getElementById('vInName').value = v.name;
+    selectedColor = v.color;
+  } else {
+    document.getElementById('vehicleSheetTitle').textContent = '車両を追加';
+    document.getElementById('vInName').value = '';
+    const used = data.vehicles.map(v=>v.color);
+    const free = COLOR_PALETTE.find(c=>!used.includes(c.id));
+    selectedColor = (free || COLOR_PALETTE[0]).id;
+  }
+  renderColorSwatches();
+  document.getElementById('vehicleBackdrop').classList.add('open');
+  document.getElementById('vehicleSheet').classList.add('open');
+}
+function closeVehicleSheet(){
+  document.getElementById('vehicleBackdrop').classList.remove('open');
+  document.getElementById('vehicleSheet').classList.remove('open');
+}
+
+function saveVehicle(){
+  const name = document.getElementById('vInName').value.trim();
+  if(!name){ alert('車両名を入力してください'); return; }
+  if(vehicleEditingId){
+    const v = data.vehicles.find(x=>x.id===vehicleEditingId);
+    if(v){ v.name = name; v.color = selectedColor; }
+    persist();
+    closeVehicleSheet();
+    renderVehicleTabs();
+    if(vehicleEditingId === current) switchVehicle(current);
+  } else {
+    if(data.vehicles.length >= MAX_VEHICLES){
+      alert('車両は最大' + MAX_VEHICLES + '台まで登録できます');
+      return;
+    }
+    const id = 'v' + Date.now().toString(36);
+    data.vehicles.push(blankVehicle(id, name, selectedColor));
+    persist();
+    closeVehicleSheet();
+    switchVehicle(id);
+  }
+}
+
+function deleteVehicle(){
+  if(!current) return;
+  const v = curVehicle();
+  if(!confirm(`「${v.name}」を削除します。給油・メンテナンス記録もすべて削除されます。よろしいですか？`)) return;
+  data.vehicles = data.vehicles.filter(x=>x.id!==current);
+  persist();
+  if(data.vehicles.length > 0){
+    switchVehicle(data.vehicles[0].id);
+  } else {
+    current = null;
+    renderVehicleTabs();
+    showEmptyVehicles();
+  }
+}
+
 function render(){
-  const entries = [...data[current]].sort((a,b)=> a.odo - b.odo);
-  const accent = VEHICLES[current].accent;
+  if(!current) return;
+  const v = curVehicle();
+  const entries = [...v.entries].sort((a,b)=> a.odo - b.odo);
+  const accent = colorHex(v.color);
   document.getElementById('gauge').style.setProperty('--accent', accent);
 
   if(entries.length < 2){
@@ -515,7 +787,7 @@ function closeSheet(){
 }
 
 function editEntry(id){
-  const entry = data[current].find(e=>e.id===id);
+  const entry = curVehicle().entries.find(e=>e.id===id);
   if(!entry) return;
   editingId = id;
   document.getElementById('sheetTitle').textContent = '給油記録を編集';
@@ -537,8 +809,9 @@ function saveEntry(){
     alert('日付・走行距離・給油量を正しく入力してください');
     return;
   }
+  const v = curVehicle();
   if(editingId){
-    const entry = data[current].find(e=>e.id===editingId);
+    const entry = v.entries.find(e=>e.id===editingId);
     if(entry){
       entry.date = date;
       entry.odo = odo;
@@ -546,7 +819,7 @@ function saveEntry(){
       entry.price = price ? parseFloat(price) : null;
     }
   } else {
-    data[current].push({
+    v.entries.push({
       id: Date.now().toString(36),
       date, odo, liters,
       price: price ? parseFloat(price) : null
@@ -558,7 +831,8 @@ function saveEntry(){
 }
 
 function deleteEntry(id){
-  data[current] = data[current].filter(e=>e.id!==id);
+  const v = curVehicle();
+  v.entries = v.entries.filter(e=>e.id!==id);
   persist();
   render();
 }
@@ -606,6 +880,7 @@ function renderKmlChart(entries){
 
 function renderCostChart(entries){
   const svg = document.getElementById('costChart');
+  const v = curVehicle();
   const monthMap = {};
   entries.forEach(e=>{
     if(!e.price) return;
@@ -613,7 +888,7 @@ function renderCostChart(entries){
     if(!monthMap[m]) monthMap[m] = {fuel:0, oil:0, tire:0, other:0};
     monthMap[m].fuel += Number(e.price);
   });
-  (data.maintenance[current] || []).forEach(e=>{
+  (v.maintenance || []).forEach(e=>{
     if(!e.price) return;
     const m = e.date.slice(0,7);
     if(!monthMap[m]) monthMap[m] = {fuel:0, oil:0, tire:0, other:0};
@@ -667,7 +942,8 @@ const MAINT_LABELS = { tire: 'タイヤ交換', oil: 'オイル交換', other: '
 
 function renderMaint(){
   const list = document.getElementById('maintList');
-  const entries = [...data.maintenance[current]].sort((a,b)=> b.odo - a.odo);
+  const v = curVehicle();
+  const entries = [...v.maintenance].sort((a,b)=> b.odo - a.odo);
   if(entries.length === 0){
     list.innerHTML = '<div class="empty">まだ記録がありません。「＋ 追加」から登録してください。</div>';
     return;
@@ -710,7 +986,7 @@ function closeMaintSheet(){
 }
 
 function editMaintEntry(id){
-  const entry = data.maintenance[current].find(e=>e.id===id);
+  const entry = curVehicle().maintenance.find(e=>e.id===id);
   if(!entry) return;
   maintEditingId = id;
   document.getElementById('maintSheetTitle').textContent = 'メンテナンス記録を編集';
@@ -733,15 +1009,16 @@ function saveMaintEntry(){
     alert('日付・走行距離を正しく入力してください');
     return;
   }
+  const v = curVehicle();
   if(maintEditingId){
-    const entry = data.maintenance[current].find(e=>e.id===maintEditingId);
+    const entry = v.maintenance.find(e=>e.id===maintEditingId);
     if(entry){
       entry.date = date; entry.odo = odo; entry.type = maintType;
       entry.price = price ? parseFloat(price) : null;
       entry.memo = memo || null;
     }
   } else {
-    data.maintenance[current].push({
+    v.maintenance.push({
       id: Date.now().toString(36),
       date, odo, type: maintType,
       price: price ? parseFloat(price) : null,
@@ -754,7 +1031,8 @@ function saveMaintEntry(){
 }
 
 function deleteMaintEntry(id){
-  data.maintenance[current] = data.maintenance[current].filter(e=>e.id!==id);
+  const v = curVehicle();
+  v.maintenance = v.maintenance.filter(e=>e.id!==id);
   persist();
   render();
 }
@@ -790,11 +1068,18 @@ function importBackup(event){
   reader.onload = () => {
     try{
       const parsed = JSON.parse(reader.result);
-      if(!parsed.stream || !parsed.cygnus) throw new Error('invalid format');
+      if(!parsed.vehicles || !Array.isArray(parsed.vehicles)) throw new Error('invalid format');
       if(!confirm('バックアップを読み込むと、現在のデータは上書きされます。よろしいですか？')) return;
       data = parsed;
+      ensureShape();
       persist();
-      render();
+      if(data.vehicles.length > 0){
+        switchVehicle(data.vehicles[0].id);
+      } else {
+        current = null;
+        renderVehicleTabs();
+        showEmptyVehicles();
+      }
       alert('バックアップを読み込みました');
     }catch(e){
       alert('ファイルの読み込みに失敗しました。正しいバックアップファイルか確認してください。');
