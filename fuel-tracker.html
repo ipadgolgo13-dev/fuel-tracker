@@ -314,7 +314,9 @@ async function sendMagicLink(){
   statusEl.textContent = '送信中…';
   const { error } = await sb.auth.signInWithOtp({ email });
   if(error){
-    statusEl.textContent = '送信に失敗しました: ' + error.message;
+    const detail = (error.message || '') + ' [status:' + (error.status || '?') + ' code:' + (error.code || '?') + ']';
+  statusEl.textContent = '送信に失敗しました: ' + detail;
+  console.error('signInWithOtp error', error);
   } else {
     statusEl.textContent = 'コードを送信しました。メールに届いた8桁のコードを入力してください。';
     document.getElementById('authCodeArea').style.display = 'block';
