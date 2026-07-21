@@ -25,6 +25,9 @@
     --teal:#4fb3a9;
     --danger:#d64550;
     --maint-color:#8a7fd6;
+    --oil-color:#8a7fd6;
+    --tire-color:#e0708a;
+    --other-color:#7d93a8;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
@@ -64,7 +67,7 @@
   .add-link{color:var(--accent); font-size:12px; letter-spacing:0; text-transform:none; font-weight:700;}
   .chart-card{padding:16px 14px 10px; border-radius:16px; background:var(--panel); border:1px solid var(--line); margin-bottom:8px;}
   .chart-card svg{width:100%; height:auto; display:block; overflow:visible;}
-  .legend{display:flex; gap:14px; font-size:11px; color:var(--muted); margin-bottom:10px;}
+  .legend{display:flex; flex-wrap:wrap; gap:8px 12px; font-size:11px; color:var(--muted); margin-bottom:10px;}
   .legend .dot{display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:5px; vertical-align:middle;}
   .chart-empty{text-align:center; color:var(--muted); font-size:12px; padding:20px 0;}
   .maint-entry{display:flex; align-items:center; gap:12px; padding:13px 14px; border-radius:14px; background:var(--panel);
@@ -122,6 +125,8 @@
   .auth-overlay{position:fixed; inset:0; background:var(--bg); z-index:100; display:flex; align-items:center; justify-content:center; padding:24px;}
   .auth-card{width:100%; max-width:360px; padding:28px 24px; border-radius:20px; background:var(--panel); border:1px solid var(--line);}
   .auth-card h2{font-size:18px; margin:0 0 8px;}
+  .auth-app-name{font-size:12px; color:var(--muted); letter-spacing:.08em; text-transform:uppercase; margin-bottom:10px;}
+  .auth-version{font-size:10px; color:var(--muted); opacity:.6; text-align:center; margin-top:16px;}
   .auth-card p{font-size:13px; color:var(--muted); margin:0 0 20px; line-height:1.6;}
   .auth-card input{width:100%; padding:12px 14px; border-radius:12px; background:var(--panel-raised); border:1px solid var(--line);
     color:var(--text); font-size:16px; margin-bottom:12px;}
@@ -137,6 +142,7 @@
 
 <div class="auth-overlay" id="authOverlay">
   <div class="auth-card">
+    <div class="auth-app-name">燃費・走行距離ログ</div>
     <h2>ログイン</h2>
     <p>メールアドレスを入力すると、8桁のログインコードが届きます。</p>
     <input type="email" id="authEmail" placeholder="メールアドレス" autocomplete="email" autocapitalize="off">
@@ -146,12 +152,13 @@
       <button onclick="verifyCode()">ログイン</button>
     </div>
     <div class="auth-status" id="authStatus"></div>
+    <div class="auth-version" id="authVersion"></div>
   </div>
 </div>
 
 <header>
   <h1>燃費・走行距離ログ</h1>
-  <div class="version"><span>v1.6.0</span><span><span class="refresh-btn" onclick="forceRefresh()">⟳ 更新を確認</span><span class="logout-link" onclick="logout()">ログアウト</span></span></div>
+  <div class="version"><span id="verLabel">v1.6.0</span><span><span class="refresh-btn" onclick="forceRefresh()">⟳ 更新を確認</span><span class="logout-link" onclick="openAccountSheet()">メール変更</span><span class="logout-link" onclick="logout()">ログアウト</span></span></div>
   <div class="tabs">
     <div class="tab" data-v="cygnus" onclick="switchVehicle('cygnus')">Cygnus Ray ZR</div>
     <div class="tab" data-v="stream" onclick="switchVehicle('stream')">Honda Stream RN6</div>
@@ -179,7 +186,7 @@
 
   <div class="section-title">月別支出</div>
   <div class="chart-card" id="costChartCard">
-    <div class="legend"><span class="dot" style="background:var(--accent)"></span>給油<span class="dot" style="background:var(--maint-color)"></span>メンテナンス</div>
+    <div class="legend"><span class="dot" style="background:var(--accent)"></span>給油<span class="dot" style="background:var(--oil-color)"></span>オイル交換<span class="dot" style="background:var(--tire-color)"></span>タイヤ交換<span class="dot" style="background:var(--other-color)"></span>その他</div>
     <svg id="costChart" viewBox="0 0 320 160" preserveAspectRatio="none"></svg>
   </div>
 
@@ -251,7 +258,30 @@
   </div>
 </div>
 
+<div class="sheet-backdrop" id="accountBackdrop" onclick="closeAccountSheet()"></div>
+<div class="sheet" id="accountSheet">
+  <div class="sheet-handle"></div>
+  <h2>メールアドレス変更</h2>
+  <div class="field">
+    <label>現在のメールアドレス</label>
+    <input type="email" id="currentEmailDisplay" disabled>
+  </div>
+  <div class="field">
+    <label>新しいメールアドレス</label>
+    <input type="email" id="newEmailInput" autocomplete="email" autocapitalize="off" placeholder="new@example.com">
+  </div>
+  <div class="auth-status" id="accountStatus"></div>
+  <div class="sheet-actions">
+    <button class="btn btn-cancel" onclick="closeAccountSheet()">キャンセル</button>
+    <button class="btn btn-save" onclick="submitEmailChange()">変更する</button>
+  </div>
+</div>
+
 <script>
+const APP_VERSION = 'v1.7.0';
+document.getElementById('verLabel').textContent = APP_VERSION;
+document.getElementById('authVersion').textContent = APP_VERSION;
+
 const VEHICLES = {
   stream: { name: 'Honda Stream RN6', accent: '#e8a33d' },
   cygnus: { name: 'Cygnus Ray ZR',     accent: '#4fb3a9' }
@@ -337,6 +367,32 @@ async function verifyCode(){
 
 async function logout(){
   await sb.auth.signOut();
+}
+
+function openAccountSheet(){
+  document.getElementById('currentEmailDisplay').value = (currentUser && currentUser.email) || '';
+  document.getElementById('newEmailInput').value = '';
+  document.getElementById('accountStatus').textContent = '';
+  document.getElementById('accountBackdrop').classList.add('open');
+  document.getElementById('accountSheet').classList.add('open');
+}
+function closeAccountSheet(){
+  document.getElementById('accountBackdrop').classList.remove('open');
+  document.getElementById('accountSheet').classList.remove('open');
+}
+
+async function submitEmailChange(){
+  const newEmail = document.getElementById('newEmailInput').value.trim();
+  const statusEl = document.getElementById('accountStatus');
+  if(!newEmail){ statusEl.textContent = '新しいメールアドレスを入力してください'; return; }
+  if(newEmail === currentUser.email){ statusEl.textContent = '現在と同じメールアドレスです'; return; }
+  statusEl.textContent = '送信中…';
+  const { error } = await sb.auth.updateUser({ email: newEmail });
+  if(error){
+    statusEl.textContent = '変更に失敗しました: ' + error.message;
+  } else {
+    statusEl.textContent = '確認メールを送信しました。現在と新しい、両方のメールアドレスに届く確認リンクをタップすると変更が完了します。';
+  }
 }
 
 async function loadFromCloud(){
@@ -554,14 +610,15 @@ function renderCostChart(entries){
   entries.forEach(e=>{
     if(!e.price) return;
     const m = e.date.slice(0,7);
-    if(!monthMap[m]) monthMap[m] = {fuel:0, maint:0};
+    if(!monthMap[m]) monthMap[m] = {fuel:0, oil:0, tire:0, other:0};
     monthMap[m].fuel += Number(e.price);
   });
   (data.maintenance[current] || []).forEach(e=>{
     if(!e.price) return;
     const m = e.date.slice(0,7);
-    if(!monthMap[m]) monthMap[m] = {fuel:0, maint:0};
-    monthMap[m].maint += Number(e.price);
+    if(!monthMap[m]) monthMap[m] = {fuel:0, oil:0, tire:0, other:0};
+    const key = (e.type === 'oil' || e.type === 'tire') ? e.type : 'other';
+    monthMap[m][key] += Number(e.price);
   });
   const months = Object.keys(monthMap).sort().slice(-6);
   if(months.length === 0){
@@ -569,28 +626,36 @@ function renderCostChart(entries){
     return;
   }
   const W=320,H=160,padB=22,padT=30,padSide=12;
-  const maxTotal = Math.max(...months.map(m=>monthMap[m].fuel+monthMap[m].maint), 1);
+  const maxTotal = Math.max(...months.map(m=>monthMap[m].fuel+monthMap[m].oil+monthMap[m].tire+monthMap[m].other), 1);
   const bw = (W-2*padSide)/months.length;
   const barW = Math.min(bw*0.5, 34);
   const accent = (getComputedStyle(document.documentElement).getPropertyValue('--accent') || '').trim() || '#e8a33d';
-  const maintColor = (getComputedStyle(document.documentElement).getPropertyValue('--maint-color') || '').trim() || '#8a7fd6';
+  const oilColor = (getComputedStyle(document.documentElement).getPropertyValue('--oil-color') || '').trim() || '#8a7fd6';
+  const tireColor = (getComputedStyle(document.documentElement).getPropertyValue('--tire-color') || '').trim() || '#e0708a';
+  const otherColor = (getComputedStyle(document.documentElement).getPropertyValue('--other-color') || '').trim() || '#7d93a8';
   let bars = '';
   months.forEach((m,i)=>{
     const cx = padSide + bw*i + bw/2;
-    const {fuel, maint} = monthMap[m];
-    const total = fuel + maint;
+    const {fuel, oil, tire, other} = monthMap[m];
+    const total = fuel + oil + tire + other;
     const totalH = (total/maxTotal) * (H-padT-padB);
-    const fuelH = total > 0 ? (fuel/total)*totalH : 0;
-    const maintH = totalH - fuelH;
     const x = cx - barW/2;
     const yBottom = H - padB;
-    const yTop = yBottom - totalH;
-    bars += `<rect x="${x.toFixed(1)}" y="${(yBottom-fuelH).toFixed(1)}" width="${barW.toFixed(1)}" height="${fuelH.toFixed(1)}" fill="${accent}" rx="3"/>`;
-    if(maintH > 0){
-      bars += `<rect x="${x.toFixed(1)}" y="${yTop.toFixed(1)}" width="${barW.toFixed(1)}" height="${maintH.toFixed(1)}" fill="${maintColor}" rx="3"/>`;
-    }
+    let yCursor = yBottom;
+    const segments = [
+      { v: fuel, color: accent },
+      { v: oil, color: oilColor },
+      { v: tire, color: tireColor },
+      { v: other, color: otherColor }
+    ];
+    segments.forEach(seg=>{
+      if(seg.v <= 0) return;
+      const segH = total > 0 ? (seg.v/total) * totalH : 0;
+      bars += `<rect x="${x.toFixed(1)}" y="${(yCursor-segH).toFixed(1)}" width="${barW.toFixed(1)}" height="${segH.toFixed(1)}" fill="${seg.color}" rx="3"/>`;
+      yCursor -= segH;
+    });
     const totalLabel = '¥' + Math.round(total).toLocaleString();
-    bars += `<text x="${cx.toFixed(1)}" y="${(yTop-6).toFixed(1)}" font-size="10" font-weight="700" fill="var(--text)" text-anchor="middle">${totalLabel}</text>`;
+    bars += `<text x="${cx.toFixed(1)}" y="${(yBottom-totalH-6).toFixed(1)}" font-size="10" font-weight="700" fill="var(--text)" text-anchor="middle">${totalLabel}</text>`;
     const label = m.slice(5,7) + '月';
     bars += `<text x="${cx.toFixed(1)}" y="${H-6}" font-size="9" fill="var(--muted)" text-anchor="middle">${label}</text>`;
   });
