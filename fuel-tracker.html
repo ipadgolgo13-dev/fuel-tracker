@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="燃費ログ">
-<meta name="theme-color" content="#14161a">
+<meta name="theme-color" content="#14161a" id="themeColorMeta">
 <title>燃費・走行距離ログ</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2314161a'/%3E%3Ctext x='50' y='62' font-size='46' text-anchor='middle' fill='%23e8a33d' font-family='monospace' font-weight='bold'%3EL/km%3C/text%3E%3C/svg%3E">
@@ -32,7 +32,7 @@
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
     font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;
-    -webkit-font-smoothing:antialiased;}
+    -webkit-font-smoothing:antialiased; transition:background .25s;}
   body{padding-bottom:env(safe-area-inset-bottom);}
   .odo-font{font-family:"SF Mono","Menlo","Courier New",monospace; font-variant-numeric:tabular-nums;}
 
@@ -183,7 +183,7 @@
 
 <header>
   <h1>燃費・走行距離ログ</h1>
-  <div class="version"><span id="verLabel">v2.1.0</span><span><span class="refresh-btn" onclick="forceRefresh()">⟳ 更新を確認</span><span class="logout-link" onclick="openAccountSheet()">メール変更</span><span class="logout-link" onclick="logout()">ログアウト</span></span></div>
+  <div class="version"><span id="verLabel">v2.2.0</span><span><span class="refresh-btn" onclick="forceRefresh()">⟳ 更新を確認</span><span class="logout-link" onclick="openAccountSheet()">メール変更</span><span class="logout-link" onclick="logout()">ログアウト</span></span></div>
   <div class="tabs" id="vehicleTabs"></div>
   <div class="subtabs" id="subTabs" style="display:none;">
     <div class="subtab active" data-p="fuel" onclick="switchPanel('fuel')">給油</div>
@@ -333,7 +333,7 @@
     <div class="color-swatches" id="colorSwatches"></div>
   </div>
   <div class="field">
-    <label>タブの背景色</label>
+    <label>アプリ全体の背景色</label>
     <div class="color-swatches" id="bgColorSwatches"></div>
   </div>
   <div class="sheet-actions">
@@ -362,18 +362,23 @@
 </div>
 
 <script>
-const APP_VERSION = 'v2.1.0';
+const APP_VERSION = 'v2.2.0';
 document.getElementById('verLabel').textContent = APP_VERSION;
 document.getElementById('authVersion').textContent = APP_VERSION;
 
 const MAX_VEHICLES = 4;
 const COLOR_PALETTE = [
-  { id:'amber',  hex:'#e8a33d' },
-  { id:'teal',   hex:'#4fb3a9' },
-  { id:'purple', hex:'#8a7fd6' },
-  { id:'pink',   hex:'#e0708a' },
-  { id:'blue',   hex:'#5b9bd5' },
-  { id:'green',  hex:'#6fbf73' }
+  { id:'white',   hex:'#f0f0f0' },
+  { id:'black',   hex:'#3a3a3a' },
+  { id:'silver',  hex:'#b0b5ba' },
+  { id:'gray',    hex:'#7d858c' },
+  { id:'red',     hex:'#d64550' },
+  { id:'blue',    hex:'#5b9bd5' },
+  { id:'navy',    hex:'#3d5a80' },
+  { id:'green',   hex:'#6fbf73' },
+  { id:'purple',  hex:'#8a7fd6' },
+  { id:'orange',  hex:'#e8a33d' },
+  { id:'yellow',  hex:'#e0c440' }
 ];
 function colorHex(id){
   const c = COLOR_PALETTE.find(c=>c.id===id);
@@ -381,16 +386,18 @@ function colorHex(id){
 }
 
 const BG_PALETTE = [
-  { id:'neutral',  hex:'#2a2d33' },
-  { id:'amberBg',  hex:'#3a2f1f' },
-  { id:'tealBg',   hex:'#1f3330' },
-  { id:'purpleBg', hex:'#2a2438' },
-  { id:'pinkBg',   hex:'#332027' },
-  { id:'blueBg',   hex:'#1f2a38' }
+  { id:'default', hex:'#14161a' },
+  { id:'navy',    hex:'#10161f' },
+  { id:'forest',  hex:'#0f1712' },
+  { id:'wine',    hex:'#180f13' },
+  { id:'plum',    hex:'#140f1a' },
+  { id:'slate',   hex:'#121417' },
+  { id:'ocean',   hex:'#0d1a1c' },
+  { id:'coffee',  hex:'#181310' }
 ];
 function bgColorHex(id){
   const c = BG_PALETTE.find(c=>c.id===id);
-  return c ? c.hex : '#2a2d33';
+  return c ? c.hex : '#14161a';
 }
 
 const STORAGE_KEY = 'fuelmate:entries:v1';
@@ -422,7 +429,6 @@ function loadData(){
 
 function ensureShape(){
   if(!data.vehicles){
-    // 旧形式（stream/cygnus固定）からの移行
     if(data.stream || data.cygnus){
       const vehicles = [];
       const cygnus = blankVehicle('cygnus', 'Cygnus Ray ZR', 'teal');
@@ -445,7 +451,7 @@ function ensureShape(){
     if(v.firstRegistration == null) v.firstRegistration = '';
     if(v.shakenDate == null) v.shakenDate = '';
     if(v.tireSize == null) v.tireSize = '';
-    if(!v.color) v.color = 'amber';
+    if(!v.color) v.color = 'orange';
     if(!v.bgColor) v.bgColor = BG_PALETTE[0].id;
   });
 }
@@ -459,7 +465,6 @@ function persist(){
   syncToCloud();
 }
 
-// ---- Supabase 連携 ----
 const SUPABASE_URL = 'https://opwszhsigwwqijcufrby.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_3k7z9MeHwzp53f7gp6u2JA_7feXPOP9';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -595,9 +600,8 @@ function renderVehicleTabs(){
   const wrap = document.getElementById('vehicleTabs');
   let html = data.vehicles.map(v=>{
     const hex = colorHex(v.color);
-    const bgHex = bgColorHex(v.bgColor);
     const isActive = v.id === current;
-    const style = isActive ? ` style="--tab-accent:${hex}; --tab-bg:${bgHex};"` : '';
+    const style = isActive ? ` style="--tab-accent:${hex}; --tab-bg:${hex}1f;"` : '';
     return `<div class="tab${isActive?' active':''}" data-v="${v.id}"${style} onclick="switchVehicle('${v.id}')">${escapeHtml(v.name)}</div>`;
   }).join('');
   if(data.vehicles.length < MAX_VEHICLES){
@@ -621,6 +625,10 @@ function switchVehicle(id){
   const hex = colorHex(v.color);
   document.documentElement.style.setProperty('--accent', hex);
   document.getElementById('gauge').style.setProperty('--accent', hex);
+  const bgHex = bgColorHex(v.bgColor);
+  document.documentElement.style.setProperty('--bg', bgHex);
+  const themeMeta = document.getElementById('themeColorMeta');
+  if(themeMeta) themeMeta.setAttribute('content', bgHex);
   switchPanel(activePanel);
   render();
 }
@@ -657,7 +665,6 @@ function saveVehicleInfo(){
   persist();
 }
 
-// ---- 車両の追加・編集・削除 ----
 function renderColorSwatches(){
   const wrap = document.getElementById('colorSwatches');
   wrap.innerHTML = COLOR_PALETTE.map(c=>{
@@ -674,7 +681,7 @@ function renderBgColorSwatches(){
   const wrap = document.getElementById('bgColorSwatches');
   wrap.innerHTML = BG_PALETTE.map(c=>{
     const sel = c.id === selectedBgColor ? ' selected' : '';
-    return `<div class="swatch${sel}" style="background:${c.hex}" onclick="selectBgColor('${c.id}')"></div>`;
+    return `<div class="swatch${sel}" style="background:${c.hex}; border-color:${c.id===selectedBgColor?'#fff':'var(--line)'}" onclick="selectBgColor('${c.id}')"></div>`;
   }).join('');
 }
 function selectBgColor(id){
@@ -734,7 +741,13 @@ function saveVehicle(){
 function deleteVehicle(){
   if(!current) return;
   const v = curVehicle();
-  if(!confirm(`「${v.name}」を削除します。給油・メンテナンス記録もすべて削除されます。よろしいですか？`)) return;
+  const code = String(Math.floor(1000 + Math.random()*9000));
+  const input = prompt(`「${v.name}」を削除すると、給油・メンテナンス記録もすべて完全に削除されます。この操作は取り消せません。\n\n削除を実行するには、次の4桁の数字をそのまま入力してください:\n\n${code}`);
+  if(input === null) return;
+  if(input.trim() !== code){
+    alert('入力された数字が一致しなかったため、削除を中止しました。');
+    return;
+  }
   data.vehicles = data.vehicles.filter(x=>x.id!==current);
   persist();
   if(data.vehicles.length > 0){
