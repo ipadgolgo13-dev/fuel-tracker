@@ -32,7 +32,7 @@
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
     font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;
-    -webkit-font-smoothing:antialiased; transition:background .25s;}
+    -webkit-font-smoothing:antialiased; transition:background .25s, color .25s;}
   body{padding-bottom:env(safe-area-inset-bottom);}
   .odo-font{font-family:"SF Mono","Menlo","Courier New",monospace; font-variant-numeric:tabular-nums;}
 
@@ -49,8 +49,6 @@
   .tab-add{flex:0 0 44px; padding:10px; border-radius:12px; background:var(--panel); border:1px dashed var(--line);
     text-align:center; font-size:16px; font-weight:600; color:var(--muted);}
   .tab-add:active{transform:scale(.95);}
-  .tab-edit-icon{position:absolute; top:-6px; right:-6px; width:18px; height:18px; border-radius:50%; background:var(--panel-raised);
-    border:1px solid var(--line); font-size:10px; display:flex; align-items:center; justify-content:center; color:var(--muted);}
 
   .subtabs{display:flex; gap:6px; margin-top:14px;}
   .subtab{flex:1; padding:9px 4px; border-radius:10px; background:var(--panel); border:1px solid var(--line);
@@ -81,7 +79,6 @@
   .chart-card svg{width:100%; height:auto; display:block; overflow:visible;}
   .legend{display:flex; flex-wrap:wrap; gap:8px 12px; font-size:11px; color:var(--muted); margin-bottom:10px;}
   .legend .dot{display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:5px; vertical-align:middle;}
-  .chart-empty{text-align:center; color:var(--muted); font-size:12px; padding:20px 0;}
   .maint-entry{display:flex; align-items:center; gap:12px; padding:13px 14px; border-radius:14px; background:var(--panel);
     border:1px solid var(--line); margin-bottom:8px; cursor:pointer;}
   .maint-entry .date{font-size:11px; color:var(--muted); width:64px; flex-shrink:0; line-height:1.3;}
@@ -141,9 +138,9 @@
   .btn-block{width:100%; margin-top:10px;}
 
   .color-swatches{display:flex; gap:12px; flex-wrap:wrap;}
-  .swatch{width:38px; height:38px; border-radius:50%; border:3px solid transparent; position:relative;}
+  .swatch{width:34px; height:34px; border-radius:50%; border:3px solid transparent; position:relative;}
   .swatch.selected{border-color:#fff;}
-  .swatch.selected::after{content:"✓"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#14161a; font-weight:700; font-size:14px;}
+  .swatch.selected::after{content:"✓"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#14161a; font-weight:700; font-size:13px;}
 
   .info-note{font-size:12px; color:var(--muted); margin:-4px 0 18px; line-height:1.6;}
 
@@ -183,7 +180,7 @@
 
 <header>
   <h1>燃費・走行距離ログ</h1>
-  <div class="version"><span id="verLabel">v2.2.0</span><span><span class="refresh-btn" onclick="forceRefresh()">⟳ 更新を確認</span><span class="logout-link" onclick="openAccountSheet()">メール変更</span><span class="logout-link" onclick="logout()">ログアウト</span></span></div>
+  <div class="version"><span id="verLabel">v2.3.0</span><span><span class="refresh-btn" onclick="forceRefresh()">⟳ 更新を確認</span><span class="logout-link" onclick="openAccountSheet()">メール変更</span><span class="logout-link" onclick="logout()">ログアウト</span></span></div>
   <div class="tabs" id="vehicleTabs"></div>
   <div class="subtabs" id="subTabs" style="display:none;">
     <div class="subtab active" data-p="fuel" onclick="switchPanel('fuel')">給油</div>
@@ -333,8 +330,12 @@
     <div class="color-swatches" id="colorSwatches"></div>
   </div>
   <div class="field">
+    <label>タブの背景色</label>
+    <div class="color-swatches" id="tabBgColorSwatches"></div>
+  </div>
+  <div class="field">
     <label>アプリ全体の背景色</label>
-    <div class="color-swatches" id="bgColorSwatches"></div>
+    <div class="color-swatches" id="appBgColorSwatches"></div>
   </div>
   <div class="sheet-actions">
     <button class="btn btn-cancel" onclick="closeVehicleSheet()">キャンセル</button>
@@ -362,7 +363,7 @@
 </div>
 
 <script>
-const APP_VERSION = 'v2.2.0';
+const APP_VERSION = 'v2.3.0';
 document.getElementById('verLabel').textContent = APP_VERSION;
 document.getElementById('authVersion').textContent = APP_VERSION;
 
@@ -384,20 +385,20 @@ function colorHex(id){
   const c = COLOR_PALETTE.find(c=>c.id===id);
   return c ? c.hex : '#e8a33d';
 }
-
-const BG_PALETTE = [
-  { id:'default', hex:'#14161a' },
-  { id:'navy',    hex:'#10161f' },
-  { id:'forest',  hex:'#0f1712' },
-  { id:'wine',    hex:'#180f13' },
-  { id:'plum',    hex:'#140f1a' },
-  { id:'slate',   hex:'#121417' },
-  { id:'ocean',   hex:'#0d1a1c' },
-  { id:'coffee',  hex:'#181310' }
-];
-function bgColorHex(id){
-  const c = BG_PALETTE.find(c=>c.id===id);
-  return c ? c.hex : '#14161a';
+function relLuminance(hex){
+  const h = (hex || '').replace('#','');
+  if(h.length !== 6) return 0.1;
+  const r = parseInt(h.substr(0,2),16)/255;
+  const g = parseInt(h.substr(2,2),16)/255;
+  const b = parseInt(h.substr(4,2),16)/255;
+  return 0.2126*r + 0.7152*g + 0.0722*b;
+}
+function tabBgFor(v){
+  if(v.tabBgColor) return colorHex(v.tabBgColor) + '33';
+  return colorHex(v.color) + '1f';
+}
+function appBgFor(v){
+  return v.appBgColor ? colorHex(v.appBgColor) : '#14161a';
 }
 
 const STORAGE_KEY = 'fuelmate:entries:v1';
@@ -409,10 +410,12 @@ let maintEditingId = null;
 let maintType = 'tire';
 let vehicleEditingId = null;
 let selectedColor = COLOR_PALETTE[0].id;
-let selectedBgColor = BG_PALETTE[0].id;
+let selectedTabBgColor = null;
+let selectedAppBgColor = null;
 
-function blankVehicle(id, name, color, bgColor){
-  return { id, name, color, bgColor: bgColor || BG_PALETTE[0].id, model:'', firstRegistration:'', shakenDate:'', tireSize:'', entries:[], maintenance:[] };
+function blankVehicle(id, name, color, tabBgColor, appBgColor){
+  return { id, name, color, tabBgColor: tabBgColor || null, appBgColor: appBgColor || null,
+    model:'', firstRegistration:'', shakenDate:'', tireSize:'', entries:[], maintenance:[] };
 }
 
 function curVehicle(){
@@ -452,7 +455,8 @@ function ensureShape(){
     if(v.shakenDate == null) v.shakenDate = '';
     if(v.tireSize == null) v.tireSize = '';
     if(!v.color) v.color = 'orange';
-    if(!v.bgColor) v.bgColor = BG_PALETTE[0].id;
+    if(v.tabBgColor === undefined) v.tabBgColor = null;
+    if(v.appBgColor === undefined) v.appBgColor = null;
   });
 }
 
@@ -601,7 +605,7 @@ function renderVehicleTabs(){
   let html = data.vehicles.map(v=>{
     const hex = colorHex(v.color);
     const isActive = v.id === current;
-    const style = isActive ? ` style="--tab-accent:${hex}; --tab-bg:${hex}1f;"` : '';
+    const style = isActive ? ` style="--tab-accent:${hex}; --tab-bg:${tabBgFor(v)};"` : '';
     return `<div class="tab${isActive?' active':''}" data-v="${v.id}"${style} onclick="switchVehicle('${v.id}')">${escapeHtml(v.name)}</div>`;
   }).join('');
   if(data.vehicles.length < MAX_VEHICLES){
@@ -625,10 +629,15 @@ function switchVehicle(id){
   const hex = colorHex(v.color);
   document.documentElement.style.setProperty('--accent', hex);
   document.getElementById('gauge').style.setProperty('--accent', hex);
-  const bgHex = bgColorHex(v.bgColor);
+
+  const bgHex = appBgFor(v);
   document.documentElement.style.setProperty('--bg', bgHex);
+  const light = relLuminance(bgHex) > 0.55;
+  document.documentElement.style.setProperty('--text', light ? '#1a1a1a' : '#eef0f0');
+  document.documentElement.style.setProperty('--muted', light ? '#5a5f66' : '#8b9199');
   const themeMeta = document.getElementById('themeColorMeta');
   if(themeMeta) themeMeta.setAttribute('content', bgHex);
+
   switchPanel(activePanel);
   render();
 }
@@ -677,16 +686,28 @@ function selectColor(id){
   renderColorSwatches();
 }
 
-function renderBgColorSwatches(){
-  const wrap = document.getElementById('bgColorSwatches');
-  wrap.innerHTML = BG_PALETTE.map(c=>{
-    const sel = c.id === selectedBgColor ? ' selected' : '';
-    return `<div class="swatch${sel}" style="background:${c.hex}; border-color:${c.id===selectedBgColor?'#fff':'var(--line)'}" onclick="selectBgColor('${c.id}')"></div>`;
+function renderTabBgSwatches(){
+  const wrap = document.getElementById('tabBgColorSwatches');
+  wrap.innerHTML = COLOR_PALETTE.map(c=>{
+    const sel = c.id === selectedTabBgColor ? ' selected' : '';
+    return `<div class="swatch${sel}" style="background:${c.hex}" onclick="selectTabBgColor('${c.id}')"></div>`;
   }).join('');
 }
-function selectBgColor(id){
-  selectedBgColor = id;
-  renderBgColorSwatches();
+function selectTabBgColor(id){
+  selectedTabBgColor = (id === selectedTabBgColor) ? null : id;
+  renderTabBgSwatches();
+}
+
+function renderAppBgSwatches(){
+  const wrap = document.getElementById('appBgColorSwatches');
+  wrap.innerHTML = COLOR_PALETTE.map(c=>{
+    const sel = c.id === selectedAppBgColor ? ' selected' : '';
+    return `<div class="swatch${sel}" style="background:${c.hex}" onclick="selectAppBgColor('${c.id}')"></div>`;
+  }).join('');
+}
+function selectAppBgColor(id){
+  selectedAppBgColor = (id === selectedAppBgColor) ? null : id;
+  renderAppBgSwatches();
 }
 
 function openVehicleSheet(id){
@@ -696,17 +717,20 @@ function openVehicleSheet(id){
     document.getElementById('vehicleSheetTitle').textContent = '車両を編集';
     document.getElementById('vInName').value = v.name;
     selectedColor = v.color;
-    selectedBgColor = v.bgColor || BG_PALETTE[0].id;
+    selectedTabBgColor = v.tabBgColor || null;
+    selectedAppBgColor = v.appBgColor || null;
   } else {
     document.getElementById('vehicleSheetTitle').textContent = '車両を追加';
     document.getElementById('vInName').value = '';
     const used = data.vehicles.map(v=>v.color);
     const free = COLOR_PALETTE.find(c=>!used.includes(c.id));
     selectedColor = (free || COLOR_PALETTE[0]).id;
-    selectedBgColor = BG_PALETTE[0].id;
+    selectedTabBgColor = null;
+    selectedAppBgColor = null;
   }
   renderColorSwatches();
-  renderBgColorSwatches();
+  renderTabBgSwatches();
+  renderAppBgSwatches();
   document.getElementById('vehicleBackdrop').classList.add('open');
   document.getElementById('vehicleSheet').classList.add('open');
 }
@@ -720,7 +744,7 @@ function saveVehicle(){
   if(!name){ alert('車両名を入力してください'); return; }
   if(vehicleEditingId){
     const v = data.vehicles.find(x=>x.id===vehicleEditingId);
-    if(v){ v.name = name; v.color = selectedColor; v.bgColor = selectedBgColor; }
+    if(v){ v.name = name; v.color = selectedColor; v.tabBgColor = selectedTabBgColor; v.appBgColor = selectedAppBgColor; }
     persist();
     closeVehicleSheet();
     renderVehicleTabs();
@@ -731,7 +755,7 @@ function saveVehicle(){
       return;
     }
     const id = 'v' + Date.now().toString(36);
-    data.vehicles.push(blankVehicle(id, name, selectedColor, selectedBgColor));
+    data.vehicles.push(blankVehicle(id, name, selectedColor, selectedTabBgColor, selectedAppBgColor));
     persist();
     closeVehicleSheet();
     switchVehicle(id);
